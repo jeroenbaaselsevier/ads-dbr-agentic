@@ -1,0 +1,13 @@
+# Databricks Asset Bundle for ads-dbr-agentic
+# Databricks CLI v0.282.0
+# See: https://docs.databricks.com/dev-tools/bundles/index.html
+
+bundle:
+  name: ads-dbr-agentic
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://elsevier-dev.cloud.databricks.com
