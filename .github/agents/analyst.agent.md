@@ -256,6 +256,23 @@ chart generation, formatting final deliverables.
 > `column_functions.long_eid_to_eidstr()`. Not all ANI EIDs appear in
 > `topic_eid` — use LEFT JOIN.
 
+> **SDG classifications:** see
+> [sdg-table-reference.md](.github/agents/sdg-table-reference.md) for
+> `snapshot_functions.sdg` — 31M rows, ~weekly snapshots, covers 17 UN SDGs.
+> Schema: `eid` (long), `sdg` (int 1–17), `confidence` (float, always ≥ 0.95).
+> `get_table(with_labels=True)` adds the SDG label string. Join directly to ANI
+> `Eid` (no conversion). LEFT JOIN — only ~22–25% of ANI papers are classified.
+
+> **Patents:** see
+> [patents-tables-reference.md](.github/agents/patents-tables-reference.md) for
+> `snapshot_functions.patents` — two sub-tables:
+> `patents.metadata` (174M rows, one row per patent, ~weekly snapshots since 2023)
+> and `patents.npl_citations_scopus` (39M rows, maps patent → Scopus EID via NPL
+> citations; 15 snapshots, latest 2025-10-24 — lags by ~5 months).
+> Use `patents.join_npl_citations()` to get all NPL citations with optional Scopus
+> EID match. Join to ANI via `eid` (long) = ANI `Eid`. ~15% of NPL citations
+> resolve to a Scopus EID. Cache large intermediate steps.
+
 ### Primary table: Scopus ANI
 ```python
 df_ani = spark.table(f'scopus.ani_{ani_stamp}')
