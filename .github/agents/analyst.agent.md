@@ -239,6 +239,14 @@ chart generation, formatting final deliverables.
 > snapshot. Key caveat: `afid` in ANI/APR is a `long`; `org_id` in OrgDB is a
 > `string` — always cast before joining.
 
+> **Source Profiles:** see
+> [source-table-reference.md](.github/agents/source-table-reference.md) for
+> `snapshot_functions.source` — ~49,400 curated journal/book/proceedings profiles
+> with CiteScore, SNIP, SJR, ISSN, ASJC classification, and publisher data.
+> These are the sources listed in the Scopus source browse. **Only ~6.8% of ANI
+> `source.srcid` values have a matching source profile** — always LEFT JOIN.
+> Join key: `id` (long) ↔ `source.srcid` (long) in ANI.
+
 ### Primary table: Scopus ANI
 ```python
 df_ani = spark.table(f'scopus.ani_{ani_stamp}')
