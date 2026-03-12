@@ -247,6 +247,15 @@ chart generation, formatting final deliverables.
 > `source.srcid` values have a matching source profile** — always LEFT JOIN.
 > Join key: `id` (long) ↔ `source.srcid` (long) in ANI.
 
+> **SciVal tables:** see
+> [scival-tables-reference.md](.github/agents/scival-tables-reference.md) for
+> `snapshot_functions.scival` — 9 tables covering topic/topic-cluster membership
+> (~121M EID rows), prominence scores, ranked keywords, article usage (views),
+> and SciVal institution mappings. Key join: `topic_eid.EidString` is the
+> `"2-s2.0-..."` string form of the ANI `Eid`; convert with
+> `column_functions.long_eid_to_eidstr()`. Not all ANI EIDs appear in
+> `topic_eid` — use LEFT JOIN.
+
 ### Primary table: Scopus ANI
 ```python
 df_ani = spark.table(f'scopus.ani_{ani_stamp}')
