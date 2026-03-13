@@ -112,6 +112,10 @@ Scopus Citation Database helpers.
 | `source.get_table(name, ...)` | Load a source profile table. |
 | `patents.get_table(name, ...)` | Load a patents table (`metadata` or `npl_citations_scopus`). |
 | `sdg.get_table(with_labels=False, ...)` | Load the SDG classification table. |
+| `topic_burst.topic.get_table(year=None)` | Load topic-level burst scores. `year` defaults to latest. Primary key: `TopicID`. |
+| `topic_burst.topic.list_snapshots()` | List available analysis years for topic burst. |
+| `topic_burst.topic_cluster.get_table(year=None)` | Load topic-cluster-level burst scores. Primary key: `Topic_Cluster`. |
+| `topic_burst.topic_cluster.list_snapshots()` | List available analysis years for topic-cluster burst. |
 
 ---
 

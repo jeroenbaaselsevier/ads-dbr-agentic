@@ -112,3 +112,89 @@ dataframe_functions.export_df_csv(
 - A paper can appear in multiple topics — use `countDistinct('Eid')` not `count()`.
 - Topic assignments change between SciVal snapshot years — specify a snapshot
   to ensure consistency across analyses.
+
+---
+
+## Burst Scores
+
+### What they are
+Burst scores measure whether a topic's **prominence percentile is accelerating**
+beyond its recent weighted trend.  They are calculated once a year (June) by the
+RADS operations team and live in S3 as pre-computed parquet files.
+
+The algorithm (decay = 0.8, 6-year window):
+1. For each topic, collect the annual prominence time-series over `year-6 … year-1`.
+2. Compute a **decayed weighted average** (recent years count more, weight = 0.8^age).
+3. `burstScore = (current_year_prominence - weighted_avg) / weighted_std`
+4. The same is done for raw **output (publication count)** — giving two independent scores.
+
+A `burstScore > 2` indicates the topic is rising significantly beyond its trend.
+
+### Available data
+| Sub-table | Granularity | Key column | S3 path |
+|---|---|---|---|
+| `topic_burst.topic` | SciVal topic | `TopicID` | `/mnt/els/rads-mappings/burst_analysis/topics/<year>/` |
+| `topic_burst.topic_cluster` | Topic cluster | `Topic_Cluster` | `/mnt/els/rads-mappings/burst_analysis/clusters/<year>/` |
+
+### Output schema (both tables)
+| Column | Type | Description |
+|---|---|---|
+| `TopicID` / `Topic_Cluster` | long | Primary key |
+| `Output_by_year` | map<long,float> | Publication count per year |
+| `Prominence_by_year` | map<long,float> | Raw prominence score per year |
+| `PromPerc_by_year` | map<long,float> | Prominence percentile per year |
+| `Prominence_Rank_by_Year` | map<long,float> | Rank among all topics per year |
+| `Prominence_ordered` | array<float> | Prominence time series (chronological) |
+| `Output_ordered` | array<float> | Output count time series (chronological) |
+| `Burst_Stats_Prominence` | struct | `{obs, average, variance, burstScore, std}` on prominence |
+| `Burst_Stats_Output` | struct | `{obs, average, variance, burstScore, std}` on output count |
+
+### Usage
+
+```python
+import snapshot_functions as sf
+
+# List available analysis years
+sf.topic_burst.topic.list_snapshots()          # e.g. [2023, 2024]
+
+# Load topic-level burst scores (latest year)
+df_burst_topic = sf.topic_burst.topic.get_table()
+
+# Load for a specific year
+df_burst_topic = sf.topic_burst.topic.get_table(2024)
+
+# Load topic-cluster-level burst scores
+df_burst_cluster = sf.topic_burst.topic_cluster.get_table(2024)
+```
+
+### Joining burst scores to an analysis
+
+```python
+# Get topics for a portfolio, then attach burst scores
+df_with_burst = (
+    df_result                       # from the template above — has topic_id col
+    .filter(F.col('topic_id').isNotNull())
+    .join(
+        df_burst_topic.select(
+            F.col('TopicID').alias('topic_id'),
+            F.col('Burst_Stats_Prominence.burstScore').alias('burst_prominence'),
+            F.col('Burst_Stats_Output.burstScore').alias('burst_output'),
+        ),
+        on='topic_id',
+        how='left',
+    )
+)
+
+# Top 20 bursting topics (by prominence burst score)
+df_with_burst.orderBy(F.col('burst_prominence').desc()).show(20)
+```
+
+### Gotchas
+- Data is **only refreshed once a year in June** — confirm the analysis year
+  matches the snapshot you want (`list_snapshots()` shows what's available).
+- The topic-to-topic-cluster mapping changes rarely (only when SciVal adds new
+  topics).  The notebooks always pick the newest relevant cluster mapping.
+- `burstScore` can be `null` if a topic has no prominence variance across the
+  window (constant or missing data).
+- There is **no single snapshot combining topics + clusters** — join them
+  via the `topic_to_topic_cluster` SciVal table if you need both levels.

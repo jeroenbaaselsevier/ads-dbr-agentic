@@ -367,6 +367,11 @@ recipes:
       - prominence
       - topic membership
       - research area analysis
+      - burst score
+      - topic burst
+      - topic acceleration
+      - emerging topics
+      - snapshot_functions.topic_burst
 
   - name: patents-citation-analysis
     reference: .github/agents/recipes/patents-citation-analysis.md
