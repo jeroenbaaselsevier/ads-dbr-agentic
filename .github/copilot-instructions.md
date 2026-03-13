@@ -16,6 +16,7 @@ analytics problems, writing new notebooks, or debugging existing ones.
 | Default Spark library path | `/Workspace/rads/library/` |
 | Local library mirror | `./rads_library/` (run `./sync_library.sh` to refresh) |
 | Python path | `PYTHONPATH` includes `./rads_library/` (set in `.databricks.env`) |
+| ADS metrics pipeline code | `./rads_metrics_code/` (run `./sync_metrics_code.sh` to refresh) |
 
 ### Available clusters
 
@@ -238,6 +239,67 @@ Provides lookup lists as lazy-loaded objects:
 
 ---
 
+## ADS derived metrics pipeline (`snapshot_functions.ads`)
+
+The ADS derived metrics are produced by a **monthly Databricks job** whose full
+source code lives at:
+
+> **GitHub:** `https://github.com/elsevier-research/rads-derived-metrics-code`
+> **Local mirror:** `./rads_metrics_code/` — run `./sync_metrics_code.sh` to clone/update
+
+The mirror is gitignored and is a shallow clone of the `main` branch.  It
+gives the agent direct read access to every production notebook that generates
+the tables visible via `snapshot_functions.ads.publication` and
+`snapshot_functions.ads.author`.
+
+### When to read the mirror
+
+- **Answering schema questions** about an ADS table: read the corresponding
+  notebook in `./rads_metrics_code/` to see exactly what columns are produced.
+- **Debugging a join or a metric value**: the notebooks show the full
+  computation including normalisation logic, window functions, and edge cases.
+- **Checking freshness of reference docs**: the agent-facing table reference
+  docs live in `.github/agents/ads-derived/`. If a query or result looks
+  inconsistent with those docs, inspect the current notebook source in the
+  mirror to check whether the pipeline was updated. Do **not** poll GitHub on
+  every request — only re-read the mirror when there is a concrete reason to
+  suspect the docs are stale (e.g. a column the docs describe is absent from
+  the actual data, or a metric behaves unexpectedly).
+
+### Key files in the mirror
+
+| File | Purpose |
+|---|---|
+| `AGENTS.md` | Architecture overview, output paths, major metric categories |
+| `dbr_job_definition.yaml` | Full pipeline task graph — shows run order and dependencies |
+| `_utils.py` | `get_snapshot_parameters()`, `get_table_ani()`, path helpers |
+| `*.py` (root) | One notebook per metric — filename = table name |
+| `archived/` | Deprecated notebooks — ignore unless explicitly researching history |
+
+### Output paths
+
+- **Publication-level parquet:**
+  `/mnt/els/rads-main/mappings_and_metrics/bibliometrics/publication_level/snapshot_metrics/<YYYYMMDD>/<TableName>/`
+- **Author-level parquet:**
+  `/mnt/els/rads-main/mappings_and_metrics/bibliometrics/author_level/snapshot_metrics/<YYYYMMDD>/<TableName>/`
+- **Hive tables:** `fca_ds.<TableName>_<YYYYMMDD>` (Unity Catalog)
+
+Access via `snapshot_functions.ads`:
+```python
+import snapshot_functions
+
+# List what tables exist in the latest publication snapshot
+snapshot_functions.ads.publication.list()
+
+# Load a table
+df = snapshot_functions.ads.publication.get_table('Article_Citation_Metrics')
+
+# Author-level
+df = snapshot_functions.ads.author.get_table('Author_Info_and_H_Index')
+```
+
+---
+
 ## Storage paths
 
 | Purpose | Base path |
@@ -245,6 +307,116 @@ Provides lookup lists as lazy-loaded objects:
 | Temporary (1 day) | `/mnt/els/rads-projects/temporary_to_be_deleted/1d/` |
 | Short-term projects | `/mnt/els/rads-projects/short_term/YYYY/<project>/` |
 | Retraction Watch cache | `/mnt/els/rads-projects/temporary_to_be_deleted/1d/<project>/rw_cache/` |
+
+### Databricks mount → S3 mapping
+
+Paths under `/mnt/els/` map directly to S3 buckets in our AWS account.
+The following buckets are accessible via the AWS CLI without any extra credentials:
+
+| Databricks path | S3 URI |
+|---|---|
+| `/mnt/els/rads-projects/…` | `s3://rads-projects/…` |
+| `/mnt/els/rads-main/…` | `s3://rads-main/…` |
+| `/mnt/els/rads-mappings/…` | `s3://rads-mappings/…` |
+| `/mnt/els/rads-pipelines/…` | `s3://rads-pipelines/…` |
+| `/mnt/els/rads-users/…` | `s3://rads-users/…` |
+| `/mnt/els/rads-restricted/…` | `s3://rads-restricted/…` |
+
+The mapping is: `/mnt/els/{bucket-name}/path` ↔ `s3://{bucket-name}/path`.
+
+**When to use the AWS CLI:**
+- Listing or inspecting parquet/CSV files without starting a Spark job
+- Checking whether a path exists or has a `_SUCCESS` marker
+- Downloading small result files locally for inspection
+- Copying outputs between paths
+
+```bash
+# List a path
+aws s3 ls s3://rads-projects/temporary_to_be_deleted/1d/my_project/
+
+# Check _SUCCESS marker (equivalent to file_functions.file_exists on Databricks)
+aws s3 ls s3://rads-main/mappings_and_metrics/bibliometrics/publication_level/snapshot_metrics/20250301/FWCI_All_cits_and_non_self_cits_perc/_SUCCESS
+
+# Download a small CSV
+aws s3 cp s3://rads-projects/short_term/2026/my_project/output.csv ./tmp/
+```
+
+### EDC — access to external (sister-team) buckets
+
+Data from other Elsevier teams is accessed via the **EDC (Elsevier Data Catalog)**,
+managed through Collibra at `https://elsevier.collibra.com/apps/`. We also call
+this system "Collibra". Each external dataset has a Collibra page that lists its
+Databricks mount point and other metadata.
+
+There are two separate access grants to request — one for Databricks, one for
+direct S3/AWS CLI access. Both are filed as access request forms on Collibra.
+
+#### Databricks access request
+
+Grants the Databricks AWS account permission to mount and read the external bucket.
+
+| Field | Value |
+|---|---|
+| Term | `Long Term` |
+| AWS Account Name | `aws-rt-databricks-prod` |
+| AWS Account Number | `533013353365` |
+| AWS Role Name | `AcademicLeadersFunders-AnalyticalDataServices-dev` |
+
+Once granted, the dataset is accessible under its Databricks mount point
+(listed on the Collibra page, typically under `/mnt/els/edc/…`).
+
+#### Direct S3 / AWS CLI access request
+
+Grants our AWS account permission to assume a cross-account role in the target
+account to read the bucket directly (without going through Databricks).
+
+| Field | Value |
+|---|---|
+| Term | `Long Term` |
+| AWS Account Name | `Data Science Production` |
+| AWS Account Number | `029211843733` |
+| AWS Role Name | `ads_crossaccount_data_consumer_role` |
+
+Access uses **role chaining**: first assume `ads_crossaccount_data_consumer_role`
+in our account (029211843733), then from that role assume the target dataset role
+(communicated by email after the Collibra request is approved).
+
+```bash
+# Prerequisites: active AWS session in WSL
+# If this returns InvalidClientTokenId or ExpiredToken, run go-aws-sso
+# in the WSL terminal to refresh credentials, then retry.
+aws sts get-caller-identity --output json
+
+# Step 1: assume our cross-account consumer role
+aws sts assume-role \
+  --role-arn arn:aws:iam::029211843733:role/ads_crossaccount_data_consumer_role \
+  --role-session-name edc-session \
+  --output json
+
+# Step 2: export the returned credentials into the shell, then assume the target dataset role
+export AWS_ACCESS_KEY_ID=<AccessKeyId from step 1>
+export AWS_SECRET_ACCESS_KEY=<SecretAccessKey from step 1>
+export AWS_SESSION_TOKEN=<SessionToken from step 1>
+
+aws sts assume-role \
+  --role-arn <target_role_arn> \
+  --role-session-name edc-data-session \
+  --output json
+
+# Step 3: export the second set of credentials, then access the bucket
+export AWS_ACCESS_KEY_ID=<AccessKeyId from step 2>
+export AWS_SECRET_ACCESS_KEY=<SecretAccessKey from step 2>
+export AWS_SESSION_TOKEN=<SessionToken from step 2>
+
+aws s3 ls s3://sccontent-parsed-ani-core-parquet-prod/ --no-sign-request
+```
+
+#### Known external datasets
+
+| Dataset | S3 bucket | Databricks mount | Target role ARN |
+|---|---|---|---|
+| ANI parsed (Scopus ANI core) | `sccontent-parsed-ani-core-parquet-prod` | `/mnt/els/edc/seccont-anicore-parsed-edc` | `arn:aws:iam::838239208477:role/EDC_814132467461_seccont-anicore-parsed-edc-01` |
+| ANI raw | `sccontent-ani-parquet-prod` | `/mnt/els/edc/seccont-anicore-raw-edc` | `arn:aws:iam::838239208477:role/EDC_814132467461_seccont-anicore-raw-edc` |
 
 ---
 

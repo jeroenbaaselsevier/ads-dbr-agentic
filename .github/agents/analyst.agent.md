@@ -47,16 +47,108 @@ Python.
 
 ## S3 access
 
-The Databricks mount path `/mnt/els/rads-projects` maps to
-`s3://rads-projects/`. When a Databricks notebook writes parquet to e.g.
-`/mnt/els/rads-projects/short_term/2026/2026_INTERNAL_my_project/cache/result`,
-that data lives at
-`s3://rads-projects/short_term/2026/2026_INTERNAL_my_project/cache/result/`.
+Databricks `/mnt/els/` mounts map directly to S3 buckets in our AWS account.
+The following buckets are accessible via the AWS CLI:
+
+| Databricks path | S3 URI |
+|---|---|
+| `/mnt/els/rads-projects/…` | `s3://rads-projects/…` |
+| `/mnt/els/rads-main/…` | `s3://rads-main/…` |
+| `/mnt/els/rads-mappings/…` | `s3://rads-mappings/…` |
+| `/mnt/els/rads-pipelines/…` | `s3://rads-pipelines/…` |
+| `/mnt/els/rads-users/…` | `s3://rads-users/…` |
+| `/mnt/els/rads-restricted/…` | `s3://rads-restricted/…` |
+
+The pattern is: drop `/mnt/els/` and replace with `s3://`. For example,
+`/mnt/els/rads-projects/short_term/2026/2026_INTERNAL_my_project/cache/result`
+lives at `s3://rads-projects/short_term/2026/2026_INTERNAL_my_project/cache/result/`.
+
+Useful AWS CLI commands:
+```bash
+# List a path
+aws s3 ls s3://rads-projects/short_term/2026/my_project/
+
+# Check _SUCCESS marker (confirms a Spark write completed)
+aws s3 ls s3://rads-main/mappings_and_metrics/.../TableName/_SUCCESS
+
+# Download a small result file
+aws s3 cp s3://rads-projects/short_term/2026/my_project/output.csv ./tmp/
+```
+
+### EDC — access to external (sister-team) buckets
+
+Data from other Elsevier teams is accessed via the **EDC (Elsevier Data Catalog)**,
+managed through Collibra at `https://elsevier.collibra.com/apps/`. Each external
+dataset has a Collibra page listing its Databricks mount point and metadata.
+There are two separate access grants — one for Databricks, one for direct S3.
+
+**Databricks access** (grants Databricks account permission to mount the bucket):
+
+| Field | Value |
+|---|---|
+| Term | `Long Term` |
+| AWS Account Name | `aws-rt-databricks-prod` |
+| AWS Account Number | `533013353365` |
+| AWS Role Name | `AcademicLeadersFunders-AnalyticalDataServices-dev` |
+
+Once granted, access the dataset via its Databricks mount (listed on Collibra,
+typically `/mnt/els/edc/…`).
+
+**Direct S3 / AWS CLI access** (grants our AWS account cross-account read via role chaining):
+
+| Field | Value |
+|---|---|
+| Term | `Long Term` |
+| AWS Account Name | `Data Science Production` |
+| AWS Account Number | `029211843733` |
+| AWS Role Name | `ads_crossaccount_data_consumer_role` |
+
+Role chain: assume `ads_crossaccount_data_consumer_role` in account 029211843733,
+then assume the target dataset role (sent by email after Collibra approval).
+
+```bash
+# Prerequisites: active AWS session in WSL
+# If the command below fails with InvalidClientTokenId or ExpiredToken,
+# run go-aws-sso in WSL to refresh, then retry.
+aws sts get-caller-identity --output json
+
+# Step 1: assume our cross-account consumer role
+aws sts assume-role \
+  --role-arn arn:aws:iam::029211843733:role/ads_crossaccount_data_consumer_role \
+  --role-session-name edc-session \
+  --output json
+
+# Step 2: export returned credentials, then assume the target dataset role
+export AWS_ACCESS_KEY_ID=<AccessKeyId>
+export AWS_SECRET_ACCESS_KEY=<SecretAccessKey>
+export AWS_SESSION_TOKEN=<SessionToken>
+
+aws sts assume-role \
+  --role-arn <target_role_arn> \
+  --role-session-name edc-data-session \
+  --output json
+
+# Step 3: export second set of credentials, then access the bucket
+export AWS_ACCESS_KEY_ID=<AccessKeyId>
+export AWS_SECRET_ACCESS_KEY=<SecretAccessKey>
+export AWS_SESSION_TOKEN=<SessionToken>
+```
+
+**Known external datasets:**
+
+| Dataset | S3 bucket | Databricks mount | Target role ARN |
+|---|---|---|---|
+| ANI parsed (Scopus ANI core) | `sccontent-parsed-ani-core-parquet-prod` | `/mnt/els/edc/seccont-anicore-parsed-edc` | `arn:aws:iam::838239208477:role/EDC_814132467461_seccont-anicore-parsed-edc-01` |
+| ANI raw | `sccontent-ani-parquet-prod` | `/mnt/els/edc/seccont-anicore-raw-edc` | `arn:aws:iam::838239208477:role/EDC_814132467461_seccont-anicore-raw-edc` |
 
 To access S3 from the local machine:
 
-1. Start an AWS SSO session: `go-aws-sso` (credentials must already be
-   configured — never store or request AWS keys).
+1. Start an AWS SSO session **in WSL**: run `go-aws-sso` in the WSL terminal
+   and follow the browser prompt. Credentials are stored in the WSL environment
+   — they are not shared with Windows. If any AWS CLI call returns
+   `InvalidClientTokenId` or `ExpiredToken`, credentials have expired and
+   `go-aws-sso` must be run again before retrying.
+   Never store or request AWS keys.
 2. Use the AWS CLI, or read parquet directly in Python:
    ```python
    import pyarrow.parquet as pq
@@ -273,6 +365,19 @@ chart generation, formatting final deliverables.
 > EID match. Join to ANI via `eid` (long) = ANI `Eid`. ~15% of NPL citations
 > resolve to a Scopus EID. Cache large intermediate steps.
 
+> **ADS derived metrics** (`snapshot_functions.ads`): see
+> [ads-derived/README.md](.github/agents/ads-derived/README.md) for the full
+> table index. Monthly pipeline producing ~30 publication-level and author-level
+> metrics tables: FWCI (all and no-self-cit, 4y/5y/no-window), citation
+> percentiles (total, ASJC27, ASJC334), collaboration levels (SciVal and OrgDB
+> institution-based), H-index, research level (BAC), SM subfield classification,
+> multidisciplinarity, transdisciplinarity, policy citations, PlumX altmetrics,
+> patent links (SciVal method), usage/FWVI, funding by funder, and gender metrics.
+> Access: `snapshot_functions.ads.publication.get_table('TableName')` and
+> `snapshot_functions.ads.author.get_table('TableName')`.
+> Join key to ANI: `EID` (long). Note: ADS tables include all SCOPUS+MEDL articles
+> including preprints — slightly broader than `nopp()` filtered ANI subsets.
+
 ### Primary table: Scopus ANI
 ```python
 df_ani = spark.table(f'scopus.ani_{ani_stamp}')
@@ -334,6 +439,8 @@ Examples:
 |---|---|---|
 | Temporary (auto-deleted) | `/mnt/els/rads-projects/temporary_to_be_deleted/1d/` | `s3://rads-projects/temporary_to_be_deleted/1d/` |
 | Short-term projects | `/mnt/els/rads-projects/short_term/<year>/<year>_<CC>_<shortname>/` | `s3://rads-projects/short_term/<year>/<year>_<CC>_<shortname>/` |
+| ADS metrics outputs | `/mnt/els/rads-main/mappings_and_metrics/bibliometrics/…` | `s3://rads-main/mappings_and_metrics/bibliometrics/…` |
+| Restricted data (gender) | `/mnt/els/rads-restricted/namsor/…` | `s3://rads-restricted/namsor/…` |
 
 ### Databricks workspace notebook path
 
@@ -376,8 +483,10 @@ their own git repo and are deployed to the user's workspace via `deploy.sh`.
 10. **Local venv** — always use `.venv` in the repo root for local Python work.
     Never install into system Python. Ensure it exists before running local
     scripts.
-11. **S3 / AWS** — never store or request AWS credentials. Assume `go-aws-sso`
-    has been run. If S3 access fails, remind the user to start an SSO session.
+11. **S3 / AWS** — never store or request AWS credentials. AWS operations run
+    in WSL. If any AWS call returns `InvalidClientTokenId` or `ExpiredToken`,
+    tell the user to run `go-aws-sso` in their WSL terminal to refresh the
+    session, then retry the operation.
 12. **DuckDB for local analytics** — prefer DuckDB over pandas for GROUP BY,
     JOIN, or window operations on parquet read from S3. Use pandas for final
     formatting and chart data prep.
