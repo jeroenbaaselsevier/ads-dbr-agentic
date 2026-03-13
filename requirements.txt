@@ -1,0 +1,26 @@
+# Local post-processing dependencies
+# Used by the .venv in the repo root for reading S3 parquet, running analytics,
+# and generating charts/Excel outputs locally.
+#
+# Setup:
+#   python3 -m venv .venv
+#   source .venv/bin/activate
+#   pip install -r requirements.txt
+
+# Data I/O
+pandas>=2.0
+pyarrow>=14.0        # read parquet from S3 via S3FileSystem
+boto3>=1.34          # AWS SDK (credential handling, S3 client)
+
+# SQL / analytics
+duckdb>=0.10         # fast local SQL over remote parquet (GROUP BY, JOIN, windows)
+
+# Visualisation
+matplotlib>=3.8
+plotly>=5.20
+
+# Excel export
+openpyxl>=3.1        # pandas .to_excel() and windows-1252 CSV
+
+# Utilities
+tqdm>=4.66           # progress bars for long local loops

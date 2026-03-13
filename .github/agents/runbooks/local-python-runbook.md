@@ -2,15 +2,39 @@
 
 ## Environment setup
 
-Before running any local Python code, ensure the `.venv` exists:
+The repo contains a `requirements.txt` with all local processing dependencies.
+Create the venv once from the repo root:
+
 ```bash
-[[ -d .venv ]] || python3 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-pip install pandas pyarrow duckdb matplotlib plotly openpyxl
+pip install -r requirements.txt
 ```
 
-Always activate the venv before running local scripts. Never install into
-system Python.
+Always activate before running any local script:
+```bash
+source .venv/bin/activate
+```
+
+Never install into system Python. To add a new package:
+```bash
+source .venv/bin/activate
+pip install <package>
+pip freeze | grep <package> >> requirements.txt   # capture the pinned version
+```
+
+## Packages available in .venv
+
+| Package | Purpose |
+|---|---|
+| `pandas` | DataFrames, pivots, final formatting, Excel/CSV export |
+| `pyarrow` | Read parquet from S3 via `S3FileSystem`; fast columnar I/O |
+| `boto3` | AWS SDK — credential handling, S3 client |
+| `duckdb` | Fast local SQL over remote parquet: GROUP BY, JOIN, window functions |
+| `matplotlib` | Static charts (PNG) |
+| `plotly` | Interactive charts (HTML) |
+| `openpyxl` | `pandas.to_excel()` and windows-1252 CSV for Excel compatibility |
+| `tqdm` | Progress bars for long local loops |
 
 ## Reading S3 data with PyArrow
 
