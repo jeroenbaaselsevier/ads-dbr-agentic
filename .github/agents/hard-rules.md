@@ -44,7 +44,7 @@ These rules are non-negotiable. Read this file at the start of every conversatio
     Never install into system Python. Ensure it exists before running local
     scripts:
     ```bash
-    [[ -d .venv ]] || python3 -m venv .venv
+    [[ -d .venv ]] || { python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt; }
     source .venv/bin/activate
     ```
 
