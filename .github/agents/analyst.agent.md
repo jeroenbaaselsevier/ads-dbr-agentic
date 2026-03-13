@@ -143,11 +143,14 @@ export AWS_SESSION_TOKEN=<SessionToken>
 
 To access S3 from the local machine:
 
-1. Start an AWS SSO session **in WSL**: run `go-aws-sso` in the WSL terminal
-   and follow the browser prompt. Credentials are stored in the WSL environment
-   — they are not shared with Windows. If any AWS CLI call returns
-   `InvalidClientTokenId` or `ExpiredToken`, credentials have expired and
-   `go-aws-sso` must be run again before retrying.
+1. Start an AWS SSO session **in WSL** by running `~/go-aws-sso` in the
+   terminal. The tool will print a browser URL and a device code — tell the
+   user to open it and approve. After approval it may prompt to select an
+   account and role; ask the user which to pick if it is not obvious, or select
+   `Data Science Production 029211843733` and `EnterpriseAdmin` as defaults.
+   Credentials are stored in the WSL environment — they are not shared with
+   Windows. If any AWS CLI call returns `InvalidClientTokenId` or
+   `ExpiredToken`, credentials have expired: run `~/go-aws-sso` again.
    Never store or request AWS keys.
 2. Use the AWS CLI, or read parquet directly in Python:
    ```python
@@ -483,10 +486,13 @@ their own git repo and are deployed to the user's workspace via `deploy.sh`.
 10. **Local venv** — always use `.venv` in the repo root for local Python work.
     Never install into system Python. Ensure it exists before running local
     scripts.
-11. **S3 / AWS** — never store or request AWS credentials. AWS operations run
-    in WSL. If any AWS call returns `InvalidClientTokenId` or `ExpiredToken`,
-    tell the user to run `go-aws-sso` in their WSL terminal to refresh the
-    session, then retry the operation.
+11. **S3 / AWS** — never store or request AWS credentials. When AWS access is
+    needed, run `~/go-aws-sso` in the terminal. It will print a browser URL for
+    approval and may then prompt for account/role selection — present the list
+    to the user and ask which to choose, defaulting to
+    `Data Science Production 029211843733` / `EnterpriseAdmin`. If any AWS call
+    returns `InvalidClientTokenId` or `ExpiredToken`, re-run `~/go-aws-sso`
+    before retrying.
 12. **DuckDB for local analytics** — prefer DuckDB over pandas for GROUP BY,
     JOIN, or window operations on parquet read from S3. Use pandas for final
     formatting and chart data prep.
