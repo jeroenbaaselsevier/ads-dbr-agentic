@@ -16,6 +16,7 @@ Databricks CLI.
 | Default Spark library path | `/Workspace/rads/library/` |
 | Local library mirror | `./rads_library/` (run `./sync_library.sh` to refresh) |
 | ADS metrics pipeline code | `./rads_metrics_code/` (run `./sync_metrics_code.sh` to refresh) |
+| Temp file scratch space | `./tmp/` — use this for all temp files to avoid OS-level permission prompts |
 
 ---
 
