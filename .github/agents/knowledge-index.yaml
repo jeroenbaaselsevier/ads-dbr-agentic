@@ -248,15 +248,20 @@ runbooks:
     reference: .github/agents/runbooks/local-python-runbook.md
     keywords:
       - venv
+      - requirements.txt
+      - requirements
       - pandas
       - duckdb
       - pyarrow
+      - boto3
       - local python
       - matplotlib
       - plotly
       - post-process
       - openpyxl
       - excel
+      - local processing
+      - activate
 
   - name: aws-and-s3
     reference: .github/agents/runbooks/aws-and-s3-runbook.md
