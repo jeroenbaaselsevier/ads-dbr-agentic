@@ -32,15 +32,18 @@ aws s3 sync s3://rads-projects/short_term/2026/my_project/results/ ./tmp/results
 
 ## Starting an AWS session (go-aws-sso)
 
-Run `~/go-aws-sso` in the terminal. It will print a browser URL + device code.
-Tell the user to open the URL and approve. After approval it may prompt for
-account/role selection — present the list to the user and ask which to choose,
-defaulting to `Data Science Production 029211843733` / `EnterpriseAdmin`.
+**Do not run `~/go-aws-sso` proactively** — it always triggers a browser
+authentication prompt, which is disruptive. Instead, attempt AWS CLI calls
+directly. Only run `~/go-aws-sso` if a call fails with an authentication
+error (`InvalidClientTokenId`, `ExpiredToken`, `NoCredentialProviders`, etc.).
+
+When authentication is needed: run `~/go-aws-sso` in the terminal. It will
+print a browser URL + device code. Tell the user to open the URL and approve.
+After approval it may prompt for account/role selection — present the list to
+the user and ask which to choose, defaulting to
+`Data Science Production 029211843733` / `EnterpriseAdmin`.
 
 Credentials are stored in the WSL environment only (not shared with Windows).
-
-If any AWS CLI call returns `InvalidClientTokenId` or `ExpiredToken`,
-credentials have expired — re-run `~/go-aws-sso` before retrying.
 
 Never store or request AWS access keys.
 

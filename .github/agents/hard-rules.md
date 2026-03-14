@@ -21,6 +21,17 @@ These rules are non-negotiable. Read this file at the start of every conversatio
 
 5. **Do not overwrite** existing notebooks without asking the user first.
 
+6. **Store all code in `notebooks/`** — every file written for a project (both
+   the Databricks `.py` notebook and any local post-processing scripts) lives
+   under `notebooks/<project_shortname>/` in the git repo. This makes the
+   analysis fully reproducible. Use sub-folders per project:
+   ```
+   notebooks/<shortname>/<shortname>_spark.py       # Databricks notebook
+   notebooks/<shortname>/<shortname>_postprocess.py  # local charts / exports
+   ```
+   Flat placement directly under `notebooks/` is acceptable for single-file
+   analyses, but a sub-folder is preferred whenever there is more than one file.
+
 6. **Never embed credentials.** The Databricks CLI uses the pre-configured
    profile. Never store or request AWS keys.
 
@@ -49,13 +60,15 @@ These rules are non-negotiable. Read this file at the start of every conversatio
     source .venv/bin/activate
     ```
 
-11. **S3 / AWS** — when AWS access is needed, run `~/go-aws-sso` in the
-    terminal. It prints a browser URL + device code for approval and may then
-    prompt for account/role selection — present the list to the user and ask
-    which to choose, defaulting to `Data Science Production 029211843733` /
-    `EnterpriseAdmin`. If any AWS call returns `InvalidClientTokenId` or
-    `ExpiredToken`, re-run `~/go-aws-sso` before retrying. Full EDC procedure
-    is in `runbooks/aws-and-s3-runbook.md`.
+11. **S3 / AWS** — before making AWS CLI calls, try them first. Only run
+    `~/go-aws-sso` if a call fails with `InvalidClientTokenId`, `ExpiredToken`,
+    or any other authentication error. Running `~/go-aws-sso` always triggers
+    a browser prompt, so do not run it preemptively. When authentication is
+    needed, it prints a browser URL + device code — present this to the user
+    and wait for approval. It may then prompt for account/role selection;
+    present the list to the user and ask which to choose, defaulting to
+    `Data Science Production 029211843733` / `EnterpriseAdmin`. Full EDC
+    procedure is in `runbooks/aws-and-s3-runbook.md`.
 
 12. **DuckDB for local analytics** — prefer DuckDB over pandas for GROUP BY,
     JOIN, or window operations on parquet read from S3. Use pandas only for

@@ -57,23 +57,48 @@ state = r['state']
 print(f\"Status: {state['life_cycle_state']}  Result: {state.get('result_state', 'n/a')}\")
 "
 ```
-Poll until `life_cycle_state` is `TERMINATED`.
+
+**Terminal `life_cycle_state` values** — stop polling immediately on any of these:
+
+| `life_cycle_state` | Meaning |
+|---|---|
+| `TERMINATED` | Job finished (check `result_state` for SUCCESS/FAILED) |
+| `INTERNAL_ERROR` | Databricks infrastructure failure (cluster start, driver crash) |
+| `SKIPPED` | Job was skipped due to a concurrency policy |
+
+> **Do not** poll only for `TERMINATED`. `INTERNAL_ERROR` is also a terminal
+> state — continuing to poll after seeing it creates an infinite loop.
+
+Polling loop that stops on **all** terminal states:
+```bash
+for i in $(seq 1 60); do
+  sleep 30
+  STATUS=$(databricks jobs get-run <run_id> -o json | python3 -c "
+import json, sys
+r = json.load(sys.stdin); s = r['state']
+print(s['life_cycle_state'], s.get('result_state', ''))
+")
+  echo "[$(date +%H:%M)] poll $i: $STATUS"
+  echo "$STATUS" | grep -qE "TERMINATED|INTERNAL_ERROR|SKIPPED" && break
+done
+```
 
 - `result_state` = `SUCCESS` → fetch output
-- `result_state` = `FAILED` → fetch error, diagnose, fix, re-deploy (up to 2 attempts)
+- `result_state` = `FAILED` → fetch error via `export-run`, diagnose, fix, re-deploy (up to 2 attempts)
+- `life_cycle_state` = `INTERNAL_ERROR` → cluster/infrastructure problem; check the Databricks run UI for the cluster event log, do **not** re-submit blindly
 
 ## Fetching results
 
 ### Full per-cell output (preferred)
 ```bash
-databricks jobs export-run <run_id> --views-to-export ALL -o json
+databricks jobs export-run <run_id> --views-to-export ALL -o json > ./tmp/run_output.html
 ```
 Returns HTML with a double-encoded notebook model inside a
 `__DATABRICKS_NOTEBOOK_MODEL` JS variable. Decode order:
 ```python
 import json, urllib.parse, base64, re
 
-raw = open('output.html').read()          # or from subprocess stdout
+raw = open('./tmp/run_output.html').read()
 match = re.search(r"__DATABRICKS_NOTEBOOK_MODEL = '([^']+)'", raw)
 encoded = match.group(1)
 model = json.loads(
@@ -83,8 +108,52 @@ model = json.loads(
         ).decode('utf-8', errors='replace')
     )
 )
-# model['commands'] — list of cells, each has 'command' (code) and 'results'
+# model['commands'] — list of cells, each has 'command' (source) and 'results'
 ```
+
+### Reading cell results and finding errors
+
+Each cell's `results` object has a `type` field. **Always inspect both the
+`data` array and top-level fields** — Spark/Analysis exceptions are stored
+differently from normal cell output:
+
+| `results.type` | Where output lives | Notes |
+|---|---|---|
+| `"text"` | `results.data` — list of `{type, data}` items | Normal `print()` / display output |
+| `"ansi"` | `results.data[*].data` | ANSI-coloured text (e.g. DataFrames) |
+| `"error"` | `results.data[*]` items with `type == "ansi"` | Python exceptions |
+| `"listResults"` | `results.data` | Multi-output cells; may be **empty** even when an error occurred |
+
+**Spark AnalysisException / cluster-level errors** are stored at the *top level*
+of `results`, not inside `data`:
+
+```python
+for i, cmd in enumerate(model['commands']):
+    r = cmd.get('results') or {}
+    rtype = r.get('type', '')
+
+    # Normal printed output
+    for item in r.get('data', []):
+        if item.get('type') == 'ansi':
+            print(f"Cell {i}: {item['data']}")
+
+    # Spark / Analysis exceptions — sit at top level, not in data[]
+    # These appear even when type == 'listResults' with empty data
+    if r.get('cause'):
+        print(f"Cell {i} CAUSE:\n{r['cause']}")
+    if r.get('summary'):
+        print(f"Cell {i} SUMMARY:\n{r['summary']}")
+
+    # Explicit error type
+    if rtype == 'error':
+        for item in r.get('data', []):
+            print(f"Cell {i} ERROR: {item.get('data', '')}")
+```
+
+Key gotcha: a cell with `type == "listResults"` and `data == []` is **not
+necessarily clean** — always check `results.cause` and `results.summary` on
+every cell regardless of type, to catch Spark analysis exceptions that bypass
+the normal error path.
 
 ### Simple exit value only
 ```bash

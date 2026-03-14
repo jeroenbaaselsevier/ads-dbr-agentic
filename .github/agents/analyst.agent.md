@@ -50,7 +50,16 @@ file and **read it**. For library function signatures, read
 `.github/agents/recipes/`. Only then write code.
 
 ### 4. Generate the notebook
-Place files under `notebooks/` using Databricks format. Mandatory boilerplate:
+Store **all code** in the git repo under `notebooks/` so the analysis is
+reproducible. For any project with more than one file (Spark notebook + local
+post-processing), use a sub-folder:
+```
+notebooks/<shortname>/<shortname>_spark.py        # Databricks notebook
+notebooks/<shortname>/<shortname>_postprocess.py   # local charts / exports
+```
+Single-file analyses may sit directly under `notebooks/`.
+
+Databricks notebook format — mandatory boilerplate:
 
 ```python
 # Databricks notebook source
