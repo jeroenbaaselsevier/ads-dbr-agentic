@@ -43,6 +43,41 @@ Ask ONE round of clarifying questions only if the question is too vague to proce
 ### 2. Plan
 Use `manage_todo_list` to outline: data load → transforms → aggregation → output.
 
+For **larger tasks** (multiple notebooks, several analytical questions, or both
+Spark and local post-processing), use subagent orchestration:
+
+#### When to delegate to subagents
+| Task type | Strategy |
+|---|---|
+| Single self-contained query | Handle directly |
+| Multiple independent analytical questions | One `analyst` subagent per question |
+| Read-only schema/codebase exploration | `Explore` subagent |
+| Sequential pipeline (Spark → local charts) | Spark step first, pass S3 paths to post-processing subagent |
+| Large multi-part deliverable | Plan in main session; delegate each part |
+
+#### How to write a subagent prompt
+Subagents have **no shared memory** — each prompt must be fully self-contained:
+- State the exact task and expected output format
+- Include all relevant paths (`str_path_project`, `cache_folder`, S3 URIs)
+- Include schema facts the subagent will need (key columns, join keys)
+- Specify where to write outputs and what to return (e.g. "return the S3 path of the saved CSV")
+
+Example:
+```python
+# In the orchestrator session:
+result = runSubagent(
+    agentName='analyst',
+    description='Compute annual output by country 2015-2024',
+    prompt=(
+        "Read .github/agents/hard-rules.md and knowledge-index.yaml first.\n"
+        "ANI stamp: 20260301. Project path: /mnt/els/rads-projects/short_term/2026/2026_XXX_myproject\n"
+        "Task: count distinct EIDs per sort_year and m_af_country (explode m_af), "
+        "filter sort_year 2015-2024, save as parquet to {project}/cache/country_output.\n"
+        "Return the S3 path of the saved result."
+    )
+)
+```
+
 ### 3. Look up schemas and join patterns
 Before writing a query, check `knowledge-index.yaml` for the relevant `reference`
 file and **read it**. For library function signatures, read

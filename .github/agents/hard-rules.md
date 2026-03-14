@@ -70,6 +70,21 @@ These rules are non-negotiable. Read this file at the start of every conversatio
     `Data Science Production 029211843733` / `EnterpriseAdmin`. Full EDC
     procedure is in `runbooks/aws-and-s3-runbook.md`.
 
+12. **Subagent orchestration** — for larger tasks (multiple notebooks, multiple
+    analytical questions, or a mix of Spark + local post-processing), decompose
+    the work and delegate self-contained steps to subagents using
+    `agent/runSubagent`. The main session acts as **orchestrator** (planning,
+    sequencing, synthesising results); subagents act as **executors**
+    (one well-scoped task each). Rules:
+    - Write a complete, self-contained prompt per subagent — include all
+      context it needs (paths, column names, expected output) since subagents
+      have no shared state.
+    - Prefer the `Explore` agent for pure read/search tasks.
+    - Prefer the `analyst` agent for Spark notebook generation and deployment.
+    - Do not launch subagents in parallel when they depend on each other's
+      output — sequence them and pass results forward in each prompt.
+    - Collect and synthesise all subagent results before presenting to the user.
+
 12. **DuckDB for local analytics** — prefer DuckDB over pandas for GROUP BY,
     JOIN, or window operations on parquet read from S3. Use pandas only for
     final formatting and chart data prep.
