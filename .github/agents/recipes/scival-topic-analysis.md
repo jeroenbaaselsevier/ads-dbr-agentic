@@ -27,7 +27,7 @@ sys.path.append('/Workspace/rads/library/')
 import column_functions, dataframe_functions, snapshot_functions
 
 ani_stamp        = '20260301'
-str_path_project = '/mnt/els/rads-projects/short_term/2026/2026_XX_topic_analysis'
+str_path_project = '/mnt/els/rads-projects/short_term/2026/2026_XXX_topic_analysis'
 cache_folder     = os.path.join(str_path_project, 'cache')
 
 # COMMAND ----------
@@ -189,9 +189,42 @@ df_with_burst = (
 df_with_burst.orderBy(F.col('burst_prominence').desc()).show(20)
 ```
 
+### Generating new burst data (missing year)
+
+If the required analysis year is not yet in `list_snapshots()`, the burst
+notebooks must be run to produce it.  This is only possible once **CiteScore
+values for that year are Complete** in the source profiles (typically available
+in the source profiles snapshot published in **June of the following year** —
+e.g. 2025 CiteScore becomes Complete around June 2026).
+
+**Notebooks:**
+| Granularity | Databricks path |
+|---|---|
+| Topic-level | `/Workspace/rads/operations/Burst_Score/Burst_Analysis_Prominence_Publications_Topics` |
+| Topic-cluster-level | `/Workspace/rads/operations/Burst_Score/Burst_Analysis_Prominence_Publications_Topic_Clusters` |
+
+**Before running:**
+1. Verify the source profiles have Complete CiteScore for `analyze_year`:
+   ```python
+   import snapshot_functions as sf
+   from pyspark.sql import functions as F
+   df_src = sf.source.get_table()
+   df_src.select(F.explode('calculations').alias('c')) \
+       .filter((F.col('c.year') == analyze_year) & (F.col('c.status') == 'Complete')) \
+       .count()  # must be > 0
+   ```
+   The notebooks include this check as an `assert` and will abort early if not met.
+2. Update `analyze_year`, `bottom_year`, and `scopus_snapshot_date` in the Settings
+   cell of each notebook.  Use the **first ANI snapshot of June** for the target year.
+3. Run **topic-clusters** and **topics** notebooks independently (order does not matter).
+
+Each notebook guards against accidental re-runs: it will raise an error if the
+output path already exists.  To regenerate, manually delete the S3 folder first.
+
 ### Gotchas
-- Data is **only refreshed once a year in June** — confirm the analysis year
-  matches the snapshot you want (`list_snapshots()` shows what's available).
+- Data is **only refreshed once a year, in ~June** — CiteScore for year Y
+  becomes Complete around June Y+1.  Do not attempt to generate burst scores
+  before then; the assert will fail.
 - The topic-to-topic-cluster mapping changes rarely (only when SciVal adds new
   topics).  The notebooks always pick the newest relevant cluster mapping.
 - `burstScore` can be `null` if a topic has no prominence variance across the

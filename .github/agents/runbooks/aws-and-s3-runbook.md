@@ -118,6 +118,6 @@ aws s3 ls s3://<bucket-name>/
 | Purpose | Databricks path | S3 equivalent |
 |---|---|---|
 | Temporary (auto-deleted 1 day) | `/mnt/els/rads-projects/temporary_to_be_deleted/1d/` | `s3://rads-projects/temporary_to_be_deleted/1d/` |
-| Short-term projects | `/mnt/els/rads-projects/short_term/<year>/<year>_<CC>_<shortname>/` | `s3://rads-projects/short_term/<year>/<year>_<CC>_<shortname>/` |
+| Short-term projects | `/mnt/els/rads-projects/short_term/<year>/<year>_<CCC>_<shortname>/` | `s3://rads-projects/short_term/<year>/<year>_<CCC>_<shortname>/` |
 | ADS metrics outputs | `/mnt/els/rads-main/mappings_and_metrics/bibliometrics/…` | `s3://rads-main/mappings_and_metrics/bibliometrics/…` |
 | Restricted data (gender) | `/mnt/els/rads-restricted/namsor/…` | `s3://rads-restricted/namsor/…` |

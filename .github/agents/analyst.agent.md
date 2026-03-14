@@ -5,7 +5,7 @@ description: >
   into PySpark notebooks, deploys them to Databricks, monitors the run, and
   presents the results back to the user.
 argument-hint: A research question about publications, citations, journals, retractions, or other Scopus bibliometric data.
-tools: ['run_in_terminal', 'get_terminal_output', 'create_file', 'read_file', 'replace_string_in_file', 'multi_replace_string_in_file', 'grep_search', 'semantic_search', 'file_search', 'list_dir', 'manage_todo_list', 'get_errors', 'runSubagent', 'memory']
+tools: [vscode/memory, execute/getTerminalOutput, execute/awaitTerminal, execute/killTerminal, execute/createAndRunTask, execute/runNotebookCell, execute/testFailure, execute/runInTerminal, read/terminalSelection, read/terminalLastCommand, read/getNotebookSummary, read/problems, read/readFile, read/readNotebookCellOutput, agent/runSubagent, edit/createDirectory, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/searchResults, search/textSearch, search/usages, web/fetch, web/githubRepo, todo, ms-python.python/getPythonEnvironmentInfo, ms-python.python/getPythonExecutableCommand, ms-python.python/installPythonPackage, ms-python.python/configurePythonEnvironment, ms-toolsai.jupyter/configureNotebook, ms-toolsai.jupyter/listNotebookPackages, ms-toolsai.jupyter/installNotebookPackages]
 ---
 
 # Analyst — Scopus / Databricks Research Analyst
@@ -62,7 +62,7 @@ sys.path.append('/Workspace/rads/library/')
 import column_functions, dataframe_functions
 
 ani_stamp        = '20260301'
-str_path_project = '/mnt/els/rads-projects/short_term/2026/2026_<CC>_<shortname>'
+str_path_project = '/mnt/els/rads-projects/short_term/2026/2026_<CCC>_<shortname>'
 cache_folder     = os.path.join(str_path_project, 'cache')
 ```
 

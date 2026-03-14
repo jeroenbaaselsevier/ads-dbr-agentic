@@ -28,7 +28,7 @@ sys.path.append('/Workspace/rads/library/')
 import column_functions, dataframe_functions, snapshot_functions
 
 ani_stamp        = '20260301'
-str_path_project = '/mnt/els/rads-projects/short_term/2026/2026_XX_sdg_analysis'
+str_path_project = '/mnt/els/rads-projects/short_term/2026/2026_XXX_sdg_analysis'
 cache_folder     = os.path.join(str_path_project, 'cache')
 
 # COMMAND ----------

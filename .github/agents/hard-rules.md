@@ -12,11 +12,12 @@ These rules are non-negotiable. Read this file at the start of every conversatio
 3. **Use `df_cached`** for any intermediate step that takes > 30 seconds or
    is reused downstream.
 
-4. **Project path naming** — use `<year>_<CC>_<shortname>` where `<CC>` is the
-   client's ISO 3166-1 alpha-2 country code, or `INTERNAL` when there is no
-   external client. Keep `<shortname>` short, lowercase, underscores only.
+4. **Project path naming** — use `<year>_<CCC>_<shortname>` where `<CCC>` is the
+   client's ISO 3166-1 **alpha-3** country code (3 letters, e.g. `USA`, `GBR`,
+   `NLD`), or `INTERNAL` when there is no external client. Keep `<shortname>`
+   short, lowercase, underscores only.
    Full path pattern:
-   `/mnt/els/rads-projects/short_term/<year>/<year>_<CC>_<shortname>/`
+   `/mnt/els/rads-projects/short_term/<year>/<year>_<CCC>_<shortname>/`
 
 5. **Do not overwrite** existing notebooks without asking the user first.
 

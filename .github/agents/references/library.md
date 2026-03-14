@@ -45,7 +45,7 @@ sys.path.append('/Workspace/rads/library/')
 ```python
 df_result = dataframe_functions.df_cached(
     df.filter(...).select(...),
-    '/mnt/els/rads-projects/short_term/2026/2026_XX_project/cache/my_step',
+    '/mnt/els/rads-projects/short_term/2026/2026_XXX_project/cache/my_step',
     partitions=10,  # higher for large datasets (>10M rows), lower for small
 )
 ```

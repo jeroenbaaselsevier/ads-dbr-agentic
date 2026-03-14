@@ -29,7 +29,7 @@ sys.path.append('/Workspace/rads/library/')
 import column_functions, dataframe_functions, snapshot_functions
 
 ani_stamp        = '20260301'
-str_path_project = '/mnt/els/rads-projects/short_term/2026/2026_XX_journal_trend'
+str_path_project = '/mnt/els/rads-projects/short_term/2026/2026_XXX_journal_trend'
 cache_folder     = os.path.join(str_path_project, 'cache')
 SRCID            = 16590   # The Lancet — replace with actual srcid
 

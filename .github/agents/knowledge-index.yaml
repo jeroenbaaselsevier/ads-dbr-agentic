@@ -372,6 +372,10 @@ recipes:
       - topic acceleration
       - emerging topics
       - snapshot_functions.topic_burst
+      - generate burst scores
+      - run burst notebook
+      - burst data missing
+      - citescore complete
 
   - name: patents-citation-analysis
     reference: .github/agents/recipes/patents-citation-analysis.md

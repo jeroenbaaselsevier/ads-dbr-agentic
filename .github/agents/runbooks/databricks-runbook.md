@@ -124,6 +124,6 @@ databricks workspace import /Workspace/rads/library/my_file.py \
 
 For notebooks to be stored persistently on Databricks:
 ```
-/Workspace/rads/projects/<year>_<CC>_<shortname>/<notebook_name>
+/Workspace/rads/projects/<year>_<CCC>_<shortname>/<notebook_name>
 ```
 In most cases, notebooks stay in the git repo and deploy via `deploy.sh`.
