@@ -1,5 +1,30 @@
 # Local Python Runbook
 
+## Databricks → local handover
+
+**Always use parquet** to pass data from a Databricks notebook to local
+processing. Never use CSV as an intermediate format between Spark and pandas —
+parquet preserves types (long, double, timestamp, nested structs), is ~10×
+smaller, and reads directly into pandas via PyArrow without any parsing.
+
+In the Databricks notebook, write to S3:
+```python
+# In the Spark notebook — write result to S3 as parquet
+(
+    df_result
+    .repartition(1)          # or more partitions for large results
+    .write
+    .mode('overwrite')
+    .parquet(f'{str_path_project}/output/my_result')
+)
+```
+
+Then read locally (see "Reading S3 data with PyArrow" below).
+
+Only use `dataframe_functions.export_df_csv()` when the **final deliverable**
+to the client is a CSV/Excel file — not as an intermediate between Spark and
+local code.
+
 ## Environment setup
 
 The repo contains a `requirements.txt` with all local processing dependencies.

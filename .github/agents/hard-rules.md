@@ -60,13 +60,15 @@ These rules are non-negotiable. Read this file at the start of every conversatio
     source .venv/bin/activate
     ```
 
-11. **S3 / AWS** — before making AWS CLI calls, try them first. Only run
-    `~/go-aws-sso` if a call fails with `InvalidClientTokenId`, `ExpiredToken`,
-    or any other authentication error. Running `~/go-aws-sso` always triggers
-    a browser prompt, so do not run it preemptively. When authentication is
-    needed, it prints a browser URL + device code — present this to the user
-    and wait for approval. It may then prompt for account/role selection;
-    present the list to the user and ask which to choose, defaulting to
+11. **S3 / AWS** — if the task will require any AWS/S3 access, run
+    `~/go-aws-sso` **at the very start of the session**, before doing anything
+    else. This ensures any browser interaction happens while the user is
+    present and paying attention, not mid-task when they may be AFK.
+    Do not re-run it mid-task unless a call fails with `InvalidClientTokenId`,
+    `ExpiredToken`, or another authentication error. When it runs, it prints a
+    browser URL + device code — present this to the user and wait for approval.
+    It may then prompt for account/role selection; present the list to the user
+    and ask which to choose, defaulting to
     `Data Science Production 029211843733` / `EnterpriseAdmin`. Full EDC
     procedure is in `runbooks/aws-and-s3-runbook.md`.
 
