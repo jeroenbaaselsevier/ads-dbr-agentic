@@ -69,7 +69,25 @@ print(f\"Status: {state['life_cycle_state']}  Result: {state.get('result_state',
 > **Do not** poll only for `TERMINATED`. `INTERNAL_ERROR` is also a terminal
 > state — continuing to poll after seeing it creates an infinite loop.
 
-Polling loop that stops on **all** terminal states:
+### Using `poll_run.sh` (preferred)
+
+```bash
+./poll_run.sh <run_id>              # poll every 30s (default)
+./poll_run.sh <run_id> 60           # poll every 60s
+```
+
+Exit codes: `0` = SUCCESS, `1` = FAILED/CANCELED, `2` = INTERNAL_ERROR/SKIPPED,
+`3` = timed out (120 polls × interval).
+
+Typical deploy-and-wait one-liner:
+```bash
+RUN_ID=$(./deploy.sh notebooks/my_analysis.py --run | python3 -c "
+import json,sys; print(json.load(sys.stdin)['run_id'])
+") && ./poll_run.sh "$RUN_ID"
+```
+
+### Manual one-off poll (without helper)
+
 ```bash
 for i in $(seq 1 60); do
   sleep 30
