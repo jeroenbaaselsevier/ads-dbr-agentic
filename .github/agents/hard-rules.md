@@ -105,3 +105,18 @@ These rules are non-negotiable. Read this file at the start of every conversatio
 15. **LEFT JOIN by default** when enriching ANI with any secondary table
     (APR, OrgDB, Source, SciVal, SDG, Patents, ADS). Coverage is always partial.
     Cast types as needed (e.g. `afid` long → string for OrgDB).
+
+16. **Missing local packages** — if a required package is not available in
+    `.venv` during local processing, **stop and tell the user** which package is
+    missing and why it is needed, then install it:
+    ```bash
+    source .venv/bin/activate
+    pip install <package>
+    pip freeze | grep <package>  # note exact version
+    ```
+    After installing, **self-patch the agent knowledge**:
+    - Append the pinned version to `requirements.txt`.
+    - Add a row for the package (name + purpose) to the packages table in
+      `runbooks/local-python-runbook.md`.
+    This keeps the documented environment in sync so every future session
+    knows the capability is available.

@@ -47,6 +47,9 @@ source .venv/bin/activate
 pip install <package>
 pip freeze | grep <package> >> requirements.txt   # capture the pinned version
 ```
+After installing, **self-patch this runbook**: add a row for the new package
+(name and purpose) to the "Packages available in .venv" table below, so every
+future session knows the capability exists.
 
 ## Packages available in .venv
 
