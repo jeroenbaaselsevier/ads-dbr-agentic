@@ -99,13 +99,25 @@ df = con.sql("""
 `load_aws_credentials()` picks up credentials from the environment — set them
 first via `go-aws-sso` if needed.
 
+## Local folder conventions
+
+| Folder | Purpose |
+|---|---|
+| `./tmp/` | Throwaway artifacts: downloaded HTML, raw parquet copies, intermediate files, decode scripts. Not shared with the user. |
+| `./output/` | Deliverables: charts (PNG/HTML), tables (CSV/Excel), any file the user needs. Always report paths here to the user. |
+
+Both folders are git-ignored. Create them as needed:
+```bash
+mkdir -p ./tmp ./output
+```
+
 ## Pandas / polars for final formatting
 
 Use pandas for final presentation, pivot tables, and chart data prep:
 ```python
 import pandas as pd
 
-# Read a small local parquet
+# Read a small local parquet (downloaded to tmp first)
 df = pd.read_parquet('./tmp/results.parquet')
 
 # Pivot

@@ -91,8 +91,12 @@ These rules are non-negotiable. Read this file at the start of every conversatio
     JOIN, or window operations on parquet read from S3. Use pandas only for
     final formatting and chart data prep.
 
-13. **Charts** — when generating visualisations, save them as files (PNG/HTML)
-    in a local `output/` folder and report the path to the user.
+13. **Local output paths** — use two distinct local folders:
+    - `./tmp/` — throwaway artifacts: downloaded HTML, raw parquet copies,
+      intermediate files, decode scripts. Never share these with the user.
+    - `./output/` — deliverables: charts (PNG/HTML), tables (CSV/Excel), and
+      any file the user needs to review or share. Always report `./output/`
+      paths to the user when a file is saved there.
 
 14. **Snapshot convention** — always use 1st-of-month ANI stamps (`20260301`,
     not `20260312`). Daily snapshots are deleted after ~2 weeks; monthly
