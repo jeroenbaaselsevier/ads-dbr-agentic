@@ -16,4 +16,8 @@ __pycache__/
 # OS
 .DS_Store
 
+# Local scratch and deliverables — not source-controlled
+tmp/
+output/
+
 tmp/
