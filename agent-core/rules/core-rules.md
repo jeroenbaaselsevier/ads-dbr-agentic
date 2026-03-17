@@ -35,8 +35,52 @@ These rules are non-negotiable. Read this file at the start of every conversatio
 7. **Never embed credentials.** The Databricks CLI uses the pre-configured
    profile. Never store or request AWS keys.
 
-8. **Idempotency** — `df_cached` is write-once. If the user says "re-run from
-   scratch", delete the cache folder before re-deploying:
+8. **Idempotency — cache invalidation** — `df_cached` is write-once.
+
+   **When to invalidate:** any time the code producing a cached DataFrame
+   changes (different filters, columns, joins, source stamp), the cache
+   will be stale and must be cleared before re-running. Two options:
+
+   **A. Change the cache sub-path** (preferred — leaves old data intact as
+   a fallback during development):
+   ```python
+   # rename the sub-folder to reflect the change
+   cache_folder = os.path.join(str_path_project, 'cache_v2')  # bump version
+   ```
+
+   **B. Delete the cache via S3** (clean slate — use when the old version
+   is no longer needed). Mount path → S3 path: drop `/mnt/els/` and use
+   the bucket name directly:
+   ```
+   /mnt/els/rads-projects/short_term/…  →  s3://rads-projects/short_term/…
+   ```
+
+   **Before deleting, always sanity-check the target.** A valid cache folder
+   contains only data files (`.parquet`, `.json`, `_SUCCESS`, `_committed_*`,
+   `_started_*`) — no subdirectories. If `aws s3 ls` shows subdirectories,
+   you are targeting the wrong level; narrow the path first.
+   ```bash
+   # 1. Inspect before deleting — look for subdirs (ends with /) vs data files
+   aws s3 ls s3://rads-projects/short_term/2026/2026_XXX_myproject/cache/my_step/
+   # Expected output: only .parquet / _SUCCESS files, no sub-folder lines
+   # If you see lines like:
+   #   PRE some_subfolder/
+   # STOP — you are at the wrong level. Append the subfolder name and re-check.
+
+   # 2. Only then delete
+   aws s3 rm s3://rads-projects/short_term/2026/2026_XXX_myproject/cache/my_step \\
+       --recursive
+   ```
+   ```python
+   # Or from a Databricks notebook cell (same sanity check via dbutils):
+   display(dbutils.fs.ls('/mnt/els/rads-projects/short_term/2026/2026_XXX_myproject/cache/my_step'))
+   # Verify only data files appear, then:
+   dbutils.fs.rm('/mnt/els/rads-projects/short_term/2026/2026_XXX_myproject/cache/my_step',
+                 recurse=True)
+   ```
+
+   **If the user says "re-run from scratch"**, delete the whole cache folder
+   before re-deploying:
    ```python
    dbutils.fs.rm(cache_folder, recurse=True)
    ```
