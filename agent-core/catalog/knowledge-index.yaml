@@ -1,0 +1,387 @@
+# Knowledge Index
+# Load this file at the start of every conversation.
+# When writing a query or notebook, look up the relevant entry and read the
+# referenced file before touching any column names or join logic.
+
+tables:
+
+  - name: ANI
+    reference: .github/agents/references/ani.md
+    spark_table: "scopus.ani_{stamp}"
+    primary_key: "Eid (long)"
+    join_to_ani: "primary table"
+    keywords:
+      - ani
+      - scopus
+      - eid
+      - publication
+      - article
+      - paper
+      - citation
+      - author
+      - affiliation
+      - doi
+      - asjc
+      - sort_year
+      - nopp
+      - preprint
+      - citation_title
+      - dbcollections
+      - funding_list
+      - openaccess
+    summary: >
+      Main Scopus article table ~109M rows, 74 columns as of March 2026.
+      Always apply nopp() to filter out preprints. Primary key is Eid (long).
+      The string form is "2-s2.0-" + zero-padded 10-digit number.
+
+  - name: APR
+    reference: .github/agents/references/apr.md
+    spark_table: "scopus.apr_{stamp}"
+    primary_key: "auid (long)"
+    join_to_ani: >
+      APR.auid ↔ ANI.Au[].auid — NOT all ANI auid values exist in APR;
+      always LEFT JOIN and fall back to ANI fields (Au.surname_pn, Au.orcid)
+      for authors without a profile.
+    keywords:
+      - apr
+      - author profile
+      - auid
+      - orcid
+      - name disambiguation
+      - preferred name
+      - current affiliation
+      - subject area
+      - merge history
+    summary: >
+      Author profiles ~59.4M rows, 30 columns. Use LEFT JOIN — coverage gaps
+      exist. Contains preferred names, ORCID, current affiliations, h-index
+      per author.
+
+  - name: OrgDB
+    reference: .github/agents/references/orgdb.md
+    spark_table: "orgdb_support (multiple tables)"
+    primary_key: "org_id (string)"
+    join_to_ani: >
+      Cast ANI.Af[].affiliation_ids (long array) to string = OrgDB.org_id.
+      afid is long in ANI but string in OrgDB — always cast before joining.
+    keywords:
+      - orgdb
+      - organisation
+      - organization
+      - institution
+      - affiliation
+      - hierarchy
+      - afid
+      - country
+      - parent
+      - get_df_hierarchy_selected
+      - get_df_generated_mapping_cached
+    summary: >
+      Institution hierarchy updated daily. Maps affiliation IDs to named
+      institutions and parent organisations. Use orgdb_functions module.
+      Type mismatch: afid is long in ANI, string in OrgDB.
+
+  - name: Source
+    reference: .github/agents/references/source.md
+    primary_key: "id (long)"
+    join_to_ani: >
+      Source.id ↔ ANI.source.srcid (both long). Only ~6.8% of ANI srcid
+      values have a matching source profile — always LEFT JOIN.
+    keywords:
+      - source
+      - journal
+      - srcid
+      - citescore
+      - snip
+      - sjr
+      - issn
+      - publisher
+      - proceedings
+      - book
+      - source profile
+    summary: >
+      ~49,400 curated journal/book/proceedings profiles. CiteScore, SNIP,
+      SJR, ISSN, ASJC classification. LEFT JOIN — only 6.8% of ANI srcids
+      are matched.
+
+  - name: SciVal
+    reference: .github/agents/references/scival.md
+    primary_key: "EidString (string, '2-s2.0-...' form)"
+    join_to_ani: >
+      SciVal.topic_eid.EidString = long_eid_to_eidstr(ANI.Eid).
+      Must convert long EID to string form before joining.
+      Not all ANI EIDs appear in topic_eid — LEFT JOIN.
+    keywords:
+      - scival
+      - topic
+      - topic cluster
+      - prominence
+      - keyword
+      - article usage
+      - views
+      - institution mapping
+      - research area
+    summary: >
+      9 tables: topic/topic-cluster membership (~121M EID rows), prominence
+      scores, ranked keywords, article views/usage, SciVal institution mappings.
+      Convert EID with long_eid_to_eidstr() before joining.
+
+  - name: SDG
+    reference: .github/agents/references/sdg.md
+    primary_key: "eid (long)"
+    join_to_ani: >
+      SDG.eid = ANI.Eid (direct long match, no conversion needed).
+      Only ~22–25% of ANI papers are classified — LEFT JOIN.
+    keywords:
+      - sdg
+      - sustainable development
+      - un goals
+      - development goals
+      - climate
+    summary: >
+      31M rows, 17 UN SDGs, confidence always ≥ 0.95. Weekly snapshots.
+      LEFT JOIN — only 22–25% coverage. get_table(with_labels=True) adds
+      the SDG label string.
+
+  - name: Patents
+    reference: .github/agents/references/patents.md
+    primary_key: "eid (long) in npl_citations_scopus"
+    join_to_ani: >
+      Patents.npl_citations_scopus.eid = ANI.Eid (direct long match).
+      Only ~15% of NPL citations resolve to a Scopus EID — LEFT JOIN.
+      npl_citations_scopus lags by ~5 months vs patents.metadata.
+    keywords:
+      - patent
+      - npl
+      - citation
+      - non-patent literature
+      - intellectual property
+      - knowledge transfer
+      - technology transfer
+    summary: >
+      174M patents (metadata) + 39M NPL citations (npl_citations_scopus).
+      ~15% of NPL citations resolve to Scopus EID. Use
+      patents.join_npl_citations() helper. Cache large intermediate steps.
+
+  - name: ADS
+    reference: .github/agents/references/ads-derived/README.md
+    primary_key: "EID (long)"
+    join_to_ani: >
+      ADS tables EID = ANI.Eid (direct long match). ADS includes all
+      SCOPUS+MEDL docs including preprints, so slightly broader than
+      nopp()-filtered ANI. LEFT JOIN.
+    keywords:
+      - ads
+      - fwci
+      - field weighted citation impact
+      - citation metric
+      - citation percentile
+      - collaboration
+      - h-index
+      - gender
+      - altmetric
+      - plumx
+      - patent link
+      - multidisciplinarity
+      - transdisciplinarity
+      - usage
+      - policy citation
+      - open access
+      - research level
+      - bac
+      - sm subfield
+    summary: >
+      Monthly pipeline, ~30 publication-level and author-level metric tables.
+      FWCI (all/no-self-cit, 4y/5y/no-window), citation percentiles
+      (total, ASJC27, ASJC334), collaboration levels, H-index, gender,
+      altmetrics, patent links, usage/FWVI, funding, policy citations.
+      Access: snapshot_functions.ads.publication.get_table('TableName').
+
+library:
+  reference: .github/agents/references/library.md
+  keywords:
+    - library
+    - column_functions
+    - dataframe_functions
+    - rwdb_functions
+    - scd_functions
+    - snapshot_functions
+    - static_data
+    - worldbank_functions
+    - orgdb_functions
+    - file_functions
+    - nopp
+    - df_cached
+    - export_df_csv
+    - export_df_json
+    - normalize_doi
+    - long_eid_to_eidstr
+    - eid_to_long
+    - get_ani_title_col
+    - share_dataframe
+    - check_and_fetch_rwdb_csv
+    - get_clean_rw_df
+  summary: >
+    All Databricks library modules and key function signatures. Read this
+    before using any rads library function.
+
+runbooks:
+
+  - name: databricks
+    reference: .github/agents/runbooks/databricks-runbook.md
+    keywords:
+      - deploy
+      - deploy.sh
+      - run
+      - monitor
+      - job
+      - cluster
+      - notebook format
+      - run_id
+      - export-run
+      - get-run
+      - databricks jobs submit
+      - cell separator
+      - COMMAND
+
+  - name: local-python
+    reference: .github/agents/runbooks/local-python-runbook.md
+    keywords:
+      - venv
+      - requirements.txt
+      - requirements
+      - pandas
+      - duckdb
+      - pyarrow
+      - boto3
+      - local python
+      - matplotlib
+      - plotly
+      - post-process
+      - openpyxl
+      - excel
+      - local processing
+      - activate
+
+  - name: aws-and-s3
+    reference: .github/agents/runbooks/aws-and-s3-runbook.md
+    keywords:
+      - s3
+      - aws
+      - aws cli
+      - edc
+      - collibra
+      - cross-account
+      - role chaining
+      - go-aws-sso
+      - bucket
+      - mount
+      - rads-projects
+      - rads-main
+
+recipes:
+
+  - name: retraction-watch
+    reference: .github/agents/recipes/retraction-watch.md
+    keywords:
+      - retraction
+      - retracted
+      - rwdb
+      - retraction watch
+      - retracted paper
+
+  - name: fwci-citation-analysis
+    reference: .github/agents/recipes/fwci-citation-analysis.md
+    keywords:
+      - fwci
+      - field weighted citation impact
+      - citation impact
+      - benchmarking
+
+  - name: edc-cross-account-access
+    reference: .github/agents/recipes/edc-cross-account-access.md
+    keywords:
+      - edc
+      - external dataset
+      - cross-account
+      - collibra
+      - anicore
+      - parsed ani
+      - sccontent
+
+  - name: gender-analysis
+    reference: .github/agents/recipes/gender-analysis.md
+    keywords:
+      - gender
+      - genderize
+      - namsor
+      - diversity
+      - female
+      - male
+      - author gender
+
+  - name: collaboration-analysis
+    reference: .github/agents/recipes/collaboration-analysis.md
+    keywords:
+      - collaboration
+      - international collaboration
+      - institutional collaboration
+      - co-authorship
+      - orgdb hierarchy
+
+  - name: journal-output-trend
+    reference: .github/agents/recipes/journal-output-trend.md
+    keywords:
+      - journal
+      - publication output
+      - trend
+      - yearly count
+      - srcid
+      - portfolio
+
+  - name: oa-analysis
+    reference: .github/agents/recipes/oa-analysis.md
+    keywords:
+      - open access
+      - oa
+      - gold
+      - hybrid
+      - green
+      - bronze
+      - diamond
+      - openaccess
+
+  - name: sdg-analysis
+    reference: .github/agents/recipes/sdg-analysis.md
+    keywords:
+      - sdg
+      - sustainable development goals
+      - un goals
+      - sdg classification
+
+  - name: scival-topic-analysis
+    reference: .github/agents/recipes/scival-topic-analysis.md
+    keywords:
+      - scival topic
+      - topic cluster
+      - prominence
+      - topic membership
+      - research area analysis
+      - burst score
+      - topic burst
+      - topic acceleration
+      - emerging topics
+      - snapshot_functions.topic_burst
+      - generate burst scores
+      - run burst notebook
+      - burst data missing
+      - citescore complete
+
+  - name: patents-citation-analysis
+    reference: .github/agents/recipes/patents-citation-analysis.md
+    keywords:
+      - patent citation
+      - npl citation
+      - knowledge transfer
+      - technology transfer
+      - paper cited by patent

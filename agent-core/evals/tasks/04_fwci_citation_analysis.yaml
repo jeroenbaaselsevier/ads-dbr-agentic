@@ -1,0 +1,33 @@
+name: fwci-citation-analysis
+description: >
+  Benchmark a paper set's citation impact using FWCI and citation percentiles
+  from the ADS derived metrics.
+
+prompt: >
+  Compute the median FWCI and the fraction of papers in the top 10% of citations
+  for papers published by University of Amsterdam (use OrgDB) in 2019-2022.
+
+expected_checks:
+  tables_selected:
+    - ANI
+    - ADS
+    - OrgDB
+  join_keys:
+    - "ADS.EID = ANI.Eid"
+    - "Cast ANI.Af[].affiliation_ids to string = OrgDB.org_id"
+  join_direction: left
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - dataframe_functions.df_cached
+  required_casts:
+    - "afid long → string for OrgDB"
+  output_columns:
+    - median_fwci
+    - pct_top10
+
+coverage_warnings_expected:
+  - "ADS is slightly broader than nopp()-filtered ANI"
+  - "LEFT JOIN"
+
+recipe: fwci-citation-analysis

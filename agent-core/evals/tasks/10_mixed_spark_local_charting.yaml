@@ -1,0 +1,36 @@
+name: mixed-spark-local-charting
+description: >
+  End-to-end task: Spark analysis followed by local Python post-processing
+  with chart generation and Excel export.
+
+prompt: >
+  For the top 10 countries by paper output in 2023, plot a grouped bar chart
+  of their output by ASJC broad subject area (use the first 2 digits).
+  Save the chart as an interactive HTML to output/ and the data as an Excel file.
+
+expected_checks:
+  tables_selected:
+    - ANI
+  join_keys: []
+  join_direction: null
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - dataframe_functions.df_cached
+  spark_output:
+    format: parquet
+    location: "S3 project path"
+  local_steps:
+    - read parquet via pyarrow + S3FileSystem
+    - pivot or DuckDB for subject area aggregation
+    - plotly for interactive chart
+    - pandas.to_excel for Excel export
+  output_files:
+    - "output/*.html"
+    - "output/*.xlsx"
+  path_convention_checks:
+    - charts_in_output_not_tmp: true
+    - paths_reported_to_user: true
+    - parquet_not_csv_for_handover: true
+
+recipe: null   # no single recipe — tests cross-recipe workflow

@@ -20,4 +20,10 @@ __pycache__/
 tmp/
 output/
 
+# NOTE: agent-core/, .claude/, .agents/, .codex/, scripts/, platform/, tools/
+# are all intentionally tracked. Generated platform adapter files
+# (.github/copilot-instructions.md, .github/agents/analyst.agent.md,
+# CLAUDE.md, AGENTS.md, .claude/, .agents/, .codex/) are committed so they
+# remain readable without running the build script.
+
 tmp/

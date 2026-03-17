@@ -1,0 +1,28 @@
+name: retraction-watch-matching
+description: >
+  Identify retracted papers in a dataset and flag them.
+
+prompt: >
+  Flag any retracted papers in Elsevier's The Lancet journal using the
+  Retraction Watch data. Show year of publication, year of retraction,
+  and type of retraction notice.
+
+expected_checks:
+  tables_selected:
+    - ANI
+  join_keys: []
+  join_direction: left
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - dataframe_functions.df_cached
+  output_columns:
+    - Eid
+    - sort_year
+    - retraction_year
+    - retraction_type
+
+coverage_warnings_expected:
+  - "Retraction Watch matching requires DOI or title normalisation"
+
+recipe: retraction-watch

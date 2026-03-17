@@ -1,0 +1,22 @@
+{# AUTO-GENERATED — DO NOT EDIT
+   Source: agent-core/ + platform/claude/templates/subagent.md.j2
+   Regenerate: python scripts/build_agent_adapters.py
+   Variables: role_name, role_file
+#}
+---
+name: {{ role_name }}
+description: >
+  {{ role_description }}
+  Built on agent-core/roles/{{ role_file }}.
+---
+
+# {{ role_title }}
+
+> AUTO-GENERATED. Role definition lives in `agent-core/roles/{{ role_file }}`.
+
+Read `agent-core/roles/{{ role_file }}` for the full role specification,
+responsibilities, output contract, and review checklist.
+
+Also read at session start:
+1. `agent-core/rules/core-rules.md`
+2. `agent-core/catalog/knowledge-index.yaml`

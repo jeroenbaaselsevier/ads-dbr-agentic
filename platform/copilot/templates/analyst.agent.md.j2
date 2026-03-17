@@ -1,3 +1,7 @@
+{# AUTO-GENERATED — DO NOT EDIT
+   Source: agent-core/ + platform/copilot/templates/analyst.agent.md.j2
+   Regenerate: python scripts/build_agent_adapters.py
+#}
 ---
 name: analyst
 description: >
@@ -80,8 +84,8 @@ import sys, os
 sys.path.append('/Workspace/rads/library/')
 import column_functions, dataframe_functions, snapshot_functions
 
-ani_stamp        = '20260301'
-str_path_project = '/mnt/els/rads-projects/short_term/2026/2026_<CCC>_<shortname>'
+ani_stamp        = '{{ ani_stamp }}'
+str_path_project = '/mnt/els/rads-projects/short_term/{{ year }}/{{ year }}_<CCC>_<shortname>'
 cache_folder     = os.path.join(str_path_project, 'cache')
 ```
 

@@ -1,0 +1,30 @@
+name: collaboration-analysis
+description: >
+  Analyse collaboration levels (single-author, national, international) and
+  sector mix for a country's paper output.
+
+prompt: >
+  For German papers (m_af_country = 'DEU') published in 2022, what fraction
+  are internationally co-authored, and what is the sector mix (academic,
+  corporate, government, medical)?
+
+expected_checks:
+  tables_selected:
+    - ANI
+    - ADS
+  join_keys:
+    - "ADS.EID = ANI.Eid"
+  join_direction: left
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - dataframe_functions.df_cached
+  output_columns:
+    - collaboration_level
+    - n_papers
+    - pct
+
+coverage_warnings_expected:
+  - "ADS is slightly broader than nopp()-filtered ANI"
+
+recipe: collaboration-analysis

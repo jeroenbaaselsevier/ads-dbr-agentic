@@ -1,0 +1,52 @@
+name: ADS
+aliases: [ads, fwci, field weighted citation impact, citation percentile, gender, altmetric, plumx, oa, open access]
+spark_table: null   # multiple tables via snapshot_functions.ads
+helper: "snapshot_functions.ads.publication.get_table('<TableName>')"
+
+primary_key:
+  name: EID
+  type: long
+
+join_rules:
+  default_join_type: left
+  join_to_ani: "ADS tables EID = ANI.Eid (direct long match)"
+  coverage: partial
+  caveat: >
+    ADS includes all SCOPUS+MEDL docs including preprints, so slightly broader
+    than nopp()-filtered ANI. Always LEFT JOIN.
+
+metric_groups:
+  publication_level:
+    - FWCI (all, no-self-cit; 4y, 5y, no-window)
+    - citation percentiles (total, ASJC27, ASJC334)
+    - collaboration levels
+    - open access flags
+    - altmetrics (Altmetric score, PlumX)
+    - patent links
+    - usage / FWVI
+    - funding
+    - policy citations
+    - research level
+    - BAC (broad area classification)
+    - SM subfield
+  author_level:
+    - H-index
+    - gender
+
+freshness:
+  update_frequency: monthly
+  last_verified_at: "2026-03-01"
+
+size:
+  approx_tables: 30
+
+references:
+  summary: agent-core/references/ads-derived/README.md
+  examples:
+    - agent-core/recipes/fwci-citation-analysis.md
+    - agent-core/recipes/gender-analysis.md
+    - agent-core/recipes/oa-analysis.md
+
+validators:
+  - use_left_join_to_ani
+  - note_ads_broader_than_nopp

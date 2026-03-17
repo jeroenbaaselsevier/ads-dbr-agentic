@@ -1,0 +1,32 @@
+name: journal-output-trend
+description: >
+  Count publications in a specified journal over time (2015-2024), broken down
+  by document type and OA status.
+
+prompt: >
+  How many papers were published in The Lancet each year from 2015 to 2024?
+  Break down by document type (article, review, letter) and open access status.
+
+expected_checks:
+  tables_selected:
+    - ANI
+    - Source
+  join_keys:
+    - "ANI.source.srcid = Source.id"
+  join_direction: left
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - dataframe_functions.df_cached
+  notebook_path_pattern: "notebooks/**/*"
+  output_columns:
+    - sort_year
+    - citation_type
+    - oa_flag
+    - count
+
+coverage_warnings_expected:
+  - "Source only covers ~6.8% of ANI srcids"
+  - "srcid discovery cell required"
+
+recipe: journal-output-trend

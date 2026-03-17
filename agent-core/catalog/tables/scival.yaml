@@ -1,0 +1,46 @@
+name: SciVal
+aliases: [scival, topic, topic cluster, prominence, topic eid, article usage, views]
+spark_table: null   # multiple tables via snapshot_functions.scival
+helper: "snapshot_functions.scival.get_table('<table_name>', snapshot=...)"
+
+primary_key:
+  name: EidString
+  type: string
+  format: "2-s2.0-<zero-padded-10-digit>"
+
+join_rules:
+  default_join_type: left
+  join_to_ani: >
+    SciVal.topic_eid.EidString = column_functions.long_eid_to_eidstr(ANI.Eid).
+    Must convert long EID to string form before joining.
+    Not all ANI EIDs appear in topic_eid.
+  required_conversions:
+    - function: "column_functions.long_eid_to_eidstr(ANI.Eid)"
+      produces: EidString
+      reason: "SciVal uses string EID form; ANI stores long"
+  coverage: partial
+
+available_tables:
+  - topic_eid          # EID → topic membership
+  - topic              # topic metadata and prominence scores
+  - topic_cluster      # cluster metadata
+  - topic_cluster_eid  # EID → cluster membership
+  - ranked_keywords    # top ranked keywords per topic
+  - article_usage      # views and usage data per EID
+  - institution_mapping # SciVal institution remapping
+
+freshness:
+  snapshot_rule: first_of_month
+  last_verified_at: "2026-03-01"
+
+size:
+  topic_eid_approx_rows: 121_000_000
+
+references:
+  summary: agent-core/references/scival.md
+  examples:
+    - agent-core/recipes/scival-topic-analysis.md
+
+validators:
+  - require_long_eid_to_eidstr_conversion
+  - use_left_join_to_ani

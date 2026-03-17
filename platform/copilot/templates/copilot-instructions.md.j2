@@ -1,5 +1,9 @@
+{# AUTO-GENERATED — DO NOT EDIT
+   Source: agent-core/ + platform/copilot/templates/copilot-instructions.md.j2
+   Regenerate: python scripts/build_agent_adapters.py
+#}
 <!-- AUTO-GENERATED — DO NOT EDIT. Source: agent-core/. Run: python scripts/build_agent_adapters.py -->
-# Copilot Instructions — ads-dbr-agentic
+# Copilot Instructions — {{ workspace_name }}
 
 This workspace develops PySpark analytics notebooks that run on a remote
 **Databricks** cluster. Code is written locally and deployed via the
@@ -11,10 +15,10 @@ Databricks CLI.
 
 | Item | Value |
 |---|---|
-| Databricks workspace | `https://elsevier-dev.cloud.databricks.com` |
-| Databricks CLI version | **v0.282.0** |
-| Default cluster | `rads-private-unity` (`0107-154653-j5wd510m`) |
-| Default Spark library path | `/Workspace/rads/library/` |
+| Databricks workspace | `{{ databricks_workspace }}` |
+| Databricks CLI version | **{{ databricks_cli_version }}** |
+| Default cluster | `{{ cluster_name }}` (`{{ cluster_id }}`) |
+| Default Spark library path | `{{ spark_library_path }}` |
 | Local library mirror | `./rads_library/` (run `./sync_library.sh` to refresh) |
 | ADS metrics pipeline code | `./rads_metrics_code/` (run `./sync_metrics_code.sh` to refresh) |
 | Temp file scratch space | `./tmp/` — use this for all temp files to avoid OS-level permission prompts |

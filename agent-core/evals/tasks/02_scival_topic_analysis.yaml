@@ -1,0 +1,33 @@
+name: scival-topic-analysis
+description: >
+  Map a portfolio of papers (a country's output 2020-2024) to SciVal research
+  topics and report topic prominence scores.
+
+prompt: >
+  For all Dutch (Netherlands) papers from 2020 to 2024, identify the top 20
+  SciVal research topics by paper count and show their prominence percentile.
+
+expected_checks:
+  tables_selected:
+    - ANI
+    - SciVal
+  join_keys:
+    - "long_eid_to_eidstr(ANI.Eid) = SciVal.topic_eid.EidString"
+  join_direction: left
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - column_functions.long_eid_to_eidstr
+    - dataframe_functions.df_cached
+    - snapshot_functions.scival.get_table
+  output_columns:
+    - topic_id
+    - topic_name
+    - n_papers
+    - prominence_percentile
+
+coverage_warnings_expected:
+  - "Not all ANI EIDs appear in topic_eid"
+  - "LEFT JOIN"
+
+recipe: scival-topic-analysis

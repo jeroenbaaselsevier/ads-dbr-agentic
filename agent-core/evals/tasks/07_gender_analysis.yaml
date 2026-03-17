@@ -1,0 +1,31 @@
+name: gender-analysis
+description: >
+  Analyse author gender distributions using ADS gender assignment tables.
+
+prompt: >
+  For papers in the top 5 cardiovascular journals (discover srcids) published
+  2018-2023, what fraction have a female first author? Show trend by year.
+
+expected_checks:
+  tables_selected:
+    - ANI
+    - ADS
+    - Source
+  join_keys:
+    - "ADS.EID = ANI.Eid"
+    - "ANI.source.srcid = Source.id"
+  join_direction: left
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - dataframe_functions.df_cached
+  output_columns:
+    - sort_year
+    - n_papers
+    - pct_female_first
+
+coverage_warnings_expected:
+  - "Gender is probabilistic — report as distribution"
+  - "LEFT JOIN"
+
+recipe: gender-analysis

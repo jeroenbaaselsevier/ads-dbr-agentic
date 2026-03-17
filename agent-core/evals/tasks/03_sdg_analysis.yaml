@@ -1,0 +1,35 @@
+name: sdg-classification-analysis
+description: >
+  Identify papers classified to UN SDGs for a given institution set and
+  report the distribution across the 17 SDGs.
+
+prompt: >
+  For papers affiliated with Wageningen University (afid: use discovery cell)
+  published 2018-2023, show how many are classified to each UN SDG. Include
+  the SDG label names in the output.
+
+expected_checks:
+  tables_selected:
+    - ANI
+    - SDG
+    - OrgDB
+  join_keys:
+    - "SDG.eid = ANI.Eid"
+    - "Cast ANI.Af[].affiliation_ids to string = OrgDB.org_id"
+  join_direction: left
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - dataframe_functions.df_cached
+    - snapshot_functions.sdg.get_table
+  required_casts:
+    - "afid long → string for OrgDB"
+  output_columns:
+    - sdg_id
+    - sdg_label
+    - n_papers
+
+coverage_warnings_expected:
+  - "Only ~22-25% of ANI papers are SDG-classified"
+
+recipe: sdg-analysis

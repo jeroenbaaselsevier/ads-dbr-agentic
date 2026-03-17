@@ -1,0 +1,21 @@
+# AUTO-GENERATED — DO NOT EDIT
+# Source: agent-core/roles/reviewer.md
+# Regenerate: python scripts/build_agent_adapters.py
+
+[agent]
+name = "reviewer"
+description = """
+Post-analysis quality checker. Verifies nopp(), LEFT JOIN usage, output paths, and coverage warnings.
+Built on agent-core/roles/reviewer.md.
+"""
+
+[agent.instructions]
+files = [
+    "agent-core/rules/core-rules.md",
+    "agent-core/catalog/knowledge-index.yaml",
+    "agent-core/roles/reviewer.md",
+]
+
+[agent.tools]
+shell = true
+files = true

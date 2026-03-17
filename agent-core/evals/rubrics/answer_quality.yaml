@@ -1,0 +1,36 @@
+name: answer_quality_rubric
+description: >
+  LLM-as-judge rubric for evaluating the quality of analyst responses.
+  Use ONLY for qualitative dimensions that static validators cannot check.
+
+dimensions:
+
+  readability:
+    description: "Is the answer written in clear, user-friendly language without raw PySpark jargon?"
+    score_1: "Output is raw code or internal API terms only; no interpretation"
+    score_3: "Mix of technical and plain language; some jargon unexplained"
+    score_5: "Fully plain language summary; technical details only in code blocks"
+
+  explanation_matches_data:
+    description: "Does the narrative interpretation correctly reflect what the numbers show?"
+    score_1: "Explanation contradicts or ignores the data"
+    score_3: "Explanation is vague or only partially aligned"
+    score_5: "Explanation is precise and fully supported by the presented data"
+
+  coverage_transparency:
+    description: "Are coverage caveats (partial joins, classification rates) communicated?"
+    score_1: "No mention of partial coverage despite LEFT JOINs or known gaps"
+    score_3: "Coverage mentioned but not quantified"
+    score_5: "Coverage rates stated with expected match percentages; denominator handling explained"
+
+  visual_recommendations:
+    description: "If charts are recommended, are they appropriate for the data shape?"
+    score_1: "Wrong chart type (e.g. pie chart for 20+ categories)"
+    score_3: "Chart type is acceptable but not optimal"
+    score_5: "Chart type and encoding match the data shape and user question"
+
+instructions: >
+  Score each dimension independently. Do not use this rubric to check
+  factual correctness of table names, column names, or join keys — use
+  static validators for those. Only use this rubric for readability,
+  narrative alignment, coverage transparency, and visual choices.

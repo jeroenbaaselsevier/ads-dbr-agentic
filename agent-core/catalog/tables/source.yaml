@@ -1,0 +1,43 @@
+name: Source
+aliases: [source, journal, source profile, citescore, srcid]
+spark_table: null   # not a Spark table — use snapshot_functions.source
+helper: "snapshot_functions.source.get_table()"
+
+primary_key:
+  name: id
+  type: long
+
+join_rules:
+  default_join_type: left
+  join_to_ani: "Source.id \u2194 ANI.source.srcid (both long)"
+  coverage: very_partial
+  caveat: >
+    Only ~6.8% of ANI srcid values have a matching source profile.
+    Always LEFT JOIN — most papers will have nulls on source columns.
+
+common_columns:
+  - id
+  - sourcetitle
+  - issn
+  - eissn
+  - publisher
+  - citescore
+  - snip
+  - sjr
+  - asjc_codes
+
+freshness:
+  snapshot_rule: first_of_month
+  last_verified_at: "2026-03-01"
+
+size:
+  approx_rows: 49_400
+
+references:
+  summary: agent-core/references/source.md
+  examples:
+    - agent-core/recipes/journal-output-trend.md
+
+validators:
+  - use_left_join_to_ani
+  - note_low_coverage_6pct

@@ -1,0 +1,51 @@
+name: ANI
+aliases: [ani, scopus, publication, article, paper]
+spark_table: "scopus.ani_{stamp}"
+
+primary_key:
+  name: Eid
+  type: long
+
+join_rules:
+  default_join_type: primary
+  join_to_ani: null
+
+mandatory_filters:
+  - nopp   # column_functions.nopp() — removes preprints
+
+common_columns:
+  - Eid
+  - sort_year
+  - citation_type
+  - "source.srcid"
+  - "source.sourcetitle"
+  - "Au[].auid"
+  - "Au[].surname_pn"
+  - "Au[].orcid"
+  - "Af[].affiliation_ids"
+  - "openaccess.flag"
+  - "openaccess.oatype"
+  - asjc
+  - dbcollections
+  - funding_list
+
+freshness:
+  snapshot_rule: first_of_month
+  retention: monthly_snapshots_12_months
+  daily_snapshots_retention: 2_weeks
+  last_verified_at: "2026-03-01"
+
+size:
+  approx_rows: 109_000_000
+  approx_columns: 74
+
+references:
+  summary: agent-core/references/ani.md
+  examples:
+    - agent-core/recipes/journal-output-trend.md
+    - agent-core/recipes/fwci-citation-analysis.md
+    - agent-core/recipes/collaboration-analysis.md
+
+validators:
+  - require_nopp_on_primary_ani
+  - use_first_of_month_stamp

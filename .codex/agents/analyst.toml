@@ -1,0 +1,21 @@
+# AUTO-GENERATED — DO NOT EDIT
+# Source: agent-core/roles/analyst-orchestrator.md
+# Regenerate: python scripts/build_agent_adapters.py
+
+[agent]
+name = "analyst"
+description = """
+Full analytics orchestrator for Scopus/bibliometric research. Plans, delegates, and synthesises results.
+Built on agent-core/roles/analyst-orchestrator.md.
+"""
+
+[agent.instructions]
+files = [
+    "agent-core/rules/core-rules.md",
+    "agent-core/catalog/knowledge-index.yaml",
+    "agent-core/roles/analyst-orchestrator.md",
+]
+
+[agent.tools]
+shell = true
+files = true

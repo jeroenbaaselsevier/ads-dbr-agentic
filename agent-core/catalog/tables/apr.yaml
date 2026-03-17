@@ -1,0 +1,40 @@
+name: APR
+aliases: [apr, author profile, author profiles]
+spark_table: "scopus.apr_{stamp}"
+
+primary_key:
+  name: auid
+  type: long
+
+join_rules:
+  default_join_type: left
+  join_to_ani: "APR.auid \u2194 ANI.Au[].auid (long \u2194 long)"
+  coverage: partial
+  caveat: >
+    NOT all ANI auid values exist in APR. Always LEFT JOIN and fall back to
+    ANI fields (Au.surname_pn, Au.orcid) for authors without a profile.
+
+common_columns:
+  - auid
+  - preferred_name
+  - orcid
+  - current_affiliation_ids
+  - subject_areas
+  - h_index
+  - document_count
+
+freshness:
+  snapshot_rule: first_of_month
+  last_verified_at: "2026-03-01"
+
+size:
+  approx_rows: 59_400_000
+  approx_columns: 30
+
+references:
+  summary: agent-core/references/apr.md
+  examples: []
+
+validators:
+  - use_left_join_to_ani
+  - do_not_inner_join_auid

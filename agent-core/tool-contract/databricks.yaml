@@ -1,0 +1,94 @@
+name: databricks
+description: >
+  Stable interface for deploying notebooks to Databricks, running jobs,
+  polling for completion, and fetching results.
+
+tools:
+
+  deploy_and_run:
+    script: tools/databricks/deploy_and_run.py
+    shell_equivalent: "./deploy.sh <notebook_path> --run"
+    inputs:
+      notebook_path:
+        type: string
+        description: "Relative path to the .py notebook file, e.g. notebooks/my_project/my_spark.py"
+      cluster_id:
+        type: string
+        default: "0107-154653-j5wd510m"
+        description: "Databricks cluster ID"
+      workspace:
+        type: string
+        default: "https://elsevier-dev.cloud.databricks.com"
+    outputs:
+      run_id:
+        type: string
+        description: "Databricks run ID (numeric string)"
+      notebook_path_remote:
+        type: string
+        description: "Path in Databricks workspace where notebook was uploaded"
+    exit_codes:
+      0: "Deployed and run started successfully"
+      1: "Deploy failed"
+      2: "Run submission failed"
+    retryable: true
+    max_retries: 2
+
+  poll_run:
+    script: tools/databricks/poll_run.py
+    shell_equivalent: "./poll_run.sh <run_id> [interval_seconds]"
+    inputs:
+      run_id:
+        type: string
+        description: "Databricks run ID returned by deploy_and_run"
+      interval_seconds:
+        type: integer
+        default: 30
+      max_polls:
+        type: integer
+        default: 120
+    outputs:
+      life_cycle_state:
+        type: string
+        enum: [TERMINATED, INTERNAL_ERROR, SKIPPED]
+      result_state:
+        type: string
+        enum: [SUCCESS, FAILED, CANCELED, TIMEDOUT, null]
+      duration_seconds:
+        type: integer
+    exit_codes:
+      0: "Run completed with result_state=SUCCESS"
+      1: "Run FAILED or CANCELED"
+      2: "INTERNAL_ERROR or SKIPPED — do not re-submit blindly; inspect logs first"
+      3: "Poll timeout reached (max_polls exceeded)"
+    notes:
+      - "INTERNAL_ERROR is terminal — stop polling, inspect the error before re-submitting"
+      - "On FAILED: decode error with export-run before retry"
+
+  export_run_output:
+    script: tools/databricks/export_run_output.py
+    shell_equivalent: "databricks jobs export-run <run_id> --views-to-export ALL -o json"
+    inputs:
+      run_id:
+        type: string
+    outputs:
+      cells:
+        type: array
+        description: "List of cell outputs with type, data, results.cause, results.summary"
+    stdout_schema:
+      type: object
+      properties:
+        cells:
+          type: array
+          items:
+            type: object
+            properties:
+              cell_index: {type: integer}
+              output_type: {type: string, enum: [display, text, error]}
+              data: {type: string, description: "Cell output text (may be empty even on error)"}
+              results.cause: {type: string, description: "Spark/Analysis exception if any"}
+              results.summary: {type: string, description: "Short error summary"}
+    exit_codes:
+      0: "Export successful"
+      1: "Export failed"
+    notes:
+      - "Empty data field does NOT mean clean — always check results.cause and results.summary"

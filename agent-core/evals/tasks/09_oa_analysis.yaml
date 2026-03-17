@@ -1,0 +1,27 @@
+name: oa-analysis
+description: >
+  Analyse open access status distribution for a paper set over time.
+
+prompt: >
+  For all papers in the field of Mathematics (ASJC 2600-range) published
+  2018-2023, show the distribution of OA types (gold, hybrid, green, bronze,
+  closed) by year.
+
+expected_checks:
+  tables_selected:
+    - ANI
+  join_keys: []
+  join_direction: null   # OA data is in ANI itself, no join needed
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - dataframe_functions.df_cached
+  output_columns:
+    - sort_year
+    - oa_type
+    - n_papers
+    - pct
+
+coverage_warnings_expected: []
+
+recipe: oa-analysis

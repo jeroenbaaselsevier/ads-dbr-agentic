@@ -1,0 +1,52 @@
+name: local-python
+description: >
+  Stable interface for local Python post-processing: reading S3 parquet,
+  running DuckDB analytics, producing charts and deliverables.
+
+environment:
+  venv: ".venv"
+  activate: "source .venv/bin/activate"
+  ensure: >
+    [[ -d .venv ]] || { python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt; }
+
+tools:
+
+  postprocess:
+    script: tools/local/postprocess.py
+    description: >
+      Generic entry point for local post-processing scripts. Activates venv,
+      reads parquet from S3, runs analytics, writes outputs.
+    inputs:
+      script_path:
+        type: string
+        description: "Path to the post-processing script, e.g. notebooks/myproject/myproject_postprocess.py"
+      s3_input_path:
+        type: string
+        description: "S3 URI of the parquet to read, e.g. s3://rads-projects/short_term/..."
+      output_dir:
+        type: string
+        default: "./output"
+    exit_codes:
+      0: "Post-processing completed successfully"
+      1: "Script failed"
+    notes:
+      - "All deliverables must be written to ./output/ not ./tmp/"
+      - "Always use parquet as input — never CSV intermediate"
+      - "Use DuckDB for GROUP BY / JOIN; pandas for final formatting"
+
+packages:
+  required:
+    - pandas
+    - pyarrow
+    - boto3
+    - duckdb
+    - matplotlib
+    - plotly
+    - openpyxl
+    - tqdm
+  install_procedure: >
+    source .venv/bin/activate && pip install <package> &&
+    pip freeze | grep <package> >> requirements.txt
+  self_patch_on_install:
+    - Add row to packages table in runbooks/local-python.md
+    - Pin version in requirements.txt

@@ -24,3 +24,4 @@ openpyxl>=3.1        # pandas .to_excel() and windows-1252 CSV
 
 # Utilities
 tqdm>=4.66           # progress bars for long local loops
+PyYAML==6.0.3

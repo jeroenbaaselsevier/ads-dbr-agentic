@@ -1,0 +1,53 @@
+name: aws
+description: >
+  Stable interface for AWS authentication and S3 access.
+
+tools:
+
+  check_auth:
+    script: tools/aws/check_auth.py
+    description: "Check whether current AWS session credentials are valid"
+    inputs: {}
+    outputs:
+      authenticated:
+        type: boolean
+      account_id:
+        type: string
+      role:
+        type: string
+      expiry:
+        type: string
+        format: ISO8601
+    exit_codes:
+      0: "Credentials are valid"
+      1: "Not authenticated or credentials expired"
+    retryable: false
+    notes:
+      - "Run this at session start when any S3 access is required"
+      - "On exit 1, run start_session to re-authenticate"
+
+  start_session:
+    script: tools/aws/start_session.sh
+    shell_equivalent: "~/go-aws-sso"
+    description: >
+      Start an AWS SSO session. Triggers a browser prompt — must only be
+      run when user is present. Present the browser URL + device code to
+      the user and wait for approval.
+    inputs:
+      account:
+        type: string
+        default: "Data Science Production 029211843733"
+      role:
+        type: string
+        default: "EnterpriseAdmin"
+    outputs:
+      authenticated:
+        type: boolean
+    exit_codes:
+      0: "Session started successfully"
+      1: "Authentication failed or timed out"
+    interactive: true
+    notes:
+      - "Always run at the start of the session (before any S3 work), not on-demand"
+      - "Only re-run mid-session on InvalidClientTokenId or ExpiredToken errors"
+      - "Full procedure in runbooks/aws-and-s3.md"

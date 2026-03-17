@@ -1,0 +1,54 @@
+name: export
+description: >
+  Stable interface for exporting results to client-facing formats
+  (CSV, Excel, HTML) and for archiving notebook outputs.
+
+tools:
+
+  export_csv:
+    function: "dataframe_functions.export_df_csv(df, path, sep, encoding)"
+    description: >
+      Export a Spark DataFrame to CSV in Databricks. Use only for
+      client-facing deliverables, not as intermediate format.
+    inputs:
+      df:
+        type: DataFrame
+      path:
+        type: string
+        description: "S3 or DBFS path for the output CSV"
+      sep:
+        type: string
+        default: ","
+      encoding:
+        type: string
+        default: "windows-1252"
+        note: "Use windows-1252 for Excel compatibility"
+    exit_codes:
+      0: "Export successful"
+      1: "Export failed"
+    notes:
+      - "Only for final client deliverable — not for Databricks→local handover"
+      - "Handover between Spark and local pandas always uses parquet"
+
+  export_excel:
+    function: "df.to_excel(path, index=False, engine='openpyxl')"
+    description: "Export a local pandas DataFrame to Excel"
+    notes:
+      - "Requires openpyxl in .venv"
+      - "Write to ./output/, not ./tmp/"
+      - "Report the ./output/ path to the user"
+
+  export_html_notebook:
+    shell_equivalent: "databricks jobs export-run <run_id> --views-to-export ALL -o json > ./tmp/run_<run_id>.json"
+    description: >
+      Download the full notebook output HTML from a completed run.
+    inputs:
+      run_id:
+        type: string
+    outputs:
+      json_path:
+        type: string
+        description: "Path to the saved JSON output (saved in ./tmp/)"
+    notes:
+      - "Store in ./tmp/ (throwaway) — decode the JSON to extract results"
+      - "See runbooks/databricks.md for the full decode procedure"

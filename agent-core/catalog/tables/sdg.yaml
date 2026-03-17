@@ -1,0 +1,37 @@
+name: SDG
+aliases: [sdg, sustainable development, un goals, climate, development goals]
+spark_table: null   # via snapshot_functions.sdg
+helper: "snapshot_functions.sdg.get_table(with_labels=True)"
+
+primary_key:
+  name: eid
+  type: long
+
+join_rules:
+  default_join_type: left
+  join_to_ani: "SDG.eid = ANI.Eid (direct long match — no conversion needed)"
+  coverage: partial
+  caveat: >
+    Only ~22–25% of ANI papers are SDG-classified. Always LEFT JOIN.
+
+common_columns:
+  - eid
+  - sdg_id
+  - sdg_label    # when with_labels=True
+  - confidence   # always >= 0.95
+
+freshness:
+  update_frequency: weekly
+  last_verified_at: "2026-03-01"
+
+size:
+  approx_rows: 31_000_000
+
+references:
+  summary: agent-core/references/sdg.md
+  examples:
+    - agent-core/recipes/sdg-analysis.md
+
+validators:
+  - use_left_join_to_ani
+  - note_22_25pct_coverage

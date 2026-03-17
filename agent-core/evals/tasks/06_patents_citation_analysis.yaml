@@ -1,0 +1,32 @@
+name: patents-citation-analysis
+description: >
+  Identify which papers in a set are cited by patents (knowledge transfer).
+
+prompt: >
+  For papers published by Oxford University Press journals (discover srcids)
+  in 2015-2020, how many are cited by at least one patent?
+
+expected_checks:
+  tables_selected:
+    - ANI
+    - Source
+    - Patents
+  join_keys:
+    - "Patents.npl_citations_scopus.eid = ANI.Eid"
+    - "ANI.source.srcid = Source.id"
+  join_direction: left
+  nopp_applied: true
+  required_functions:
+    - column_functions.nopp
+    - dataframe_functions.df_cached
+    - patents.join_npl_citations
+  output_columns:
+    - n_papers_total
+    - n_papers_patent_cited
+    - pct_patent_cited
+
+coverage_warnings_expected:
+  - "Only ~15% of NPL citations resolve to Scopus EID"
+  - "npl_citations_scopus lags metadata by ~5 months"
+
+recipe: patents-citation-analysis

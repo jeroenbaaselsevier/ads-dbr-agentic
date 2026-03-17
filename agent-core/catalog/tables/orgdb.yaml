@@ -1,0 +1,38 @@
+name: OrgDB
+aliases: [orgdb, organisation, organization, institution, affiliation hierarchy]
+spark_table: "orgdb_support (multiple tables)"
+
+primary_key:
+  name: org_id
+  type: string
+
+join_rules:
+  default_join_type: left
+  join_to_ani: "Cast ANI.Af[].affiliation_ids (long) to string = OrgDB.org_id (string)"
+  coverage: partial
+  required_casts:
+    - from: "ANI.Af[].affiliation_ids"
+      type_from: long
+      type_to: string
+      reason: "afid is long in ANI but string in OrgDB — always cast before joining"
+
+common_columns:
+  - org_id
+  - name
+  - country
+  - parent_org_id
+  - org_type
+  - is_active
+
+freshness:
+  update_frequency: daily
+  last_verified_at: "2026-03-01"
+
+references:
+  summary: agent-core/references/orgdb.md
+  examples:
+    - agent-core/recipes/collaboration-analysis.md
+
+validators:
+  - cast_afid_to_string_before_join
+  - use_left_join_to_ani
