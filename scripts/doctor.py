@@ -110,6 +110,26 @@ def main() -> int:
     # 10. Check agent-core/ exists
     results.append(check("agent-core/ canonical directory exists", (REPO_ROOT / "agent-core").is_dir()))
 
+    # 11. Check projects/ exists
+    results.append(check("projects/ directory exists", (REPO_ROOT / "projects").is_dir()))
+
+    # 12. Check project lifecycle scripts
+    for script_name in ["init_project.py", "activate_project.py", "closeout_project.py", "capture_lessons.py"]:
+        script = REPO_ROOT / "scripts" / script_name
+        results.append(check(f"scripts/{script_name} exists", script.exists()))
+
+    # 13. Check tools/local/postprocess.py
+    postprocess = REPO_ROOT / "tools" / "local" / "postprocess.py"
+    results.append(check("tools/local/postprocess.py exists", postprocess.exists()))
+
+    # 14. Check .agent-state/ is creatable
+    agent_state = REPO_ROOT / ".agent-state"
+    results.append(check(
+        ".agent-state/ directory accessible",
+        agent_state.is_dir() or not agent_state.exists(),
+        "Will be created on first project init" if not agent_state.exists() else "",
+    ))
+
     print()
     failed = [r for r in results if r["status"] == "FAIL"]
     if failed:

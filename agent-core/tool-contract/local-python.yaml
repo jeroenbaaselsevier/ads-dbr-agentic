@@ -15,22 +15,25 @@ tools:
     script: tools/local/postprocess.py
     description: >
       Generic entry point for local post-processing scripts. Activates venv,
-      reads parquet from S3, runs analytics, writes outputs.
+      resolves the active project for output/tmp paths, runs analytics,
+      writes outputs.
     inputs:
       script_path:
         type: string
-        description: "Path to the post-processing script, e.g. notebooks/myproject/myproject_postprocess.py"
+        description: "Path to the post-processing script, e.g. projects/2026_NLD_journal_trend/scripts/local/postprocess.py"
       s3_input_path:
         type: string
         description: "S3 URI of the parquet to read, e.g. s3://rads-projects/short_term/..."
       output_dir:
         type: string
-        default: "./output"
+        default: "projects/<project_id>/output (from active project) or ./output"
     exit_codes:
       0: "Post-processing completed successfully"
       1: "Script failed"
     notes:
-      - "All deliverables must be written to ./output/ not ./tmp/"
+      - "Deliverables go to projects/<project_id>/output/ when a project is active"
+      - "Temp files go to projects/<project_id>/tmp/ when a project is active"
+      - "Falls back to ./output/ and ./tmp/ when no active project exists"
       - "Always use parquet as input — never CSV intermediate"
       - "Use DuckDB for GROUP BY / JOIN; pandas for final formatting"
 

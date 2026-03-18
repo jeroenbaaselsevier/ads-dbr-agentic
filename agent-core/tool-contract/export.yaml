@@ -35,8 +35,9 @@ tools:
     description: "Export a local pandas DataFrame to Excel"
     notes:
       - "Requires openpyxl in .venv"
-      - "Write to ./output/, not ./tmp/"
-      - "Report the ./output/ path to the user"
+      - "Write to projects/<project_id>/output/ when a project is active"
+      - "Falls back to ./output/ for legacy/one-off work"
+      - "Report the output path to the user"
 
   export_html_notebook:
     shell_equivalent: "databricks jobs export-run <run_id> --views-to-export ALL -o json > ./tmp/run_<run_id>.json"
@@ -48,7 +49,7 @@ tools:
     outputs:
       json_path:
         type: string
-        description: "Path to the saved JSON output (saved in ./tmp/)"
+        description: "Path to the saved JSON output (saved in project tmp or ./tmp/)"
     notes:
-      - "Store in ./tmp/ (throwaway) — decode the JSON to extract results"
+      - "Store in projects/<project_id>/tmp/ (or ./tmp/ for legacy) — decode the JSON to extract results"
       - "See runbooks/databricks.md for the full decode procedure"

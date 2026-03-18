@@ -5,7 +5,8 @@ init_project.py
 Create or reuse a project scaffold under projects/<project_id>/.
 
 Generates the local folder structure, project.yaml manifest, context stubs,
-and prints canonical paths as JSON for agent consumption.
+activates the project (writes .agent-state/active_project.json), and prints
+canonical paths as JSON for agent consumption.
 
 Usage:
     python scripts/init_project.py \
@@ -14,16 +15,29 @@ Usage:
         --short-name journal_trend \
         --display-name "Journal trend analysis for client X" \
         [--ani-stamp 20260301] \
+        [--session-id 20260318T1620] \
+        [--no-activate] \
         [--create-remote]
 
 Output (JSON):
     {
       "created": true,
       "project_id": "2026_NLD_journal_trend",
+      "session_id": "20260318T1620",
+      "active_state_path": ".agent-state/active_project.json",
       "local_root": "projects/2026_NLD_journal_trend",
       "s3_root": "s3://rads-projects/short_term/2026/2026_NLD_journal_trend",
       "dbfs_root": "/mnt/els/rads-projects/short_term/2026/2026_NLD_journal_trend",
-      "databricks_workspace_root": "/Workspace/rads/projects/2026_NLD_journal_trend"
+      "databricks_workspace_root": "/Workspace/rads/projects/2026_NLD_journal_trend",
+      "defaults": {
+        "spark_notebook": "projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py",
+        "exploratory_notebook_dir": "projects/2026_NLD_journal_trend/notebooks/exploratory",
+        "local_postprocess": "projects/2026_NLD_journal_trend/scripts/local/postprocess.py",
+        "databricks_spark_notebook": "/Workspace/rads/projects/2026_NLD_journal_trend/notebooks/spark/journal_trend"
+      },
+      "paths": {
+        "databricks_workspace_root": "/Workspace/rads/projects/2026_NLD_journal_trend"
+      }
     }
 """
 
@@ -37,6 +51,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROJECTS_DIR = REPO_ROOT / "projects"
+AGENT_STATE_DIR = REPO_ROOT / ".agent-state"
 
 # S3 bucket (no trailing slash)
 S3_BUCKET = "rads-projects"
@@ -82,12 +97,16 @@ def derive_folders(year: int, project_id: str) -> dict:
     local_root = f"projects/{project_id}"
     remote_base = f"{DBFS_MOUNT}/{year}/{project_id}"
     s3_base = f"s3://{S3_BUCKET}/{S3_PREFIX}/{year}/{project_id}"
+    ws_root = f"{WORKSPACE_PREFIX}/{project_id}"
     return {
         "local_output": f"{local_root}/output",
         "local_tmp": f"{local_root}/tmp",
-        "spark_cache": f"{remote_base}/cache",
+        "dbfs_cache": f"{remote_base}/cache",
         "s3_output": f"{s3_base}/output",
         "s3_cache": f"{s3_base}/cache",
+        "s3_exports": f"{s3_base}/exports",
+        "s3_logs": f"{s3_base}/logs",
+        "databricks_notebooks_root": f"{ws_root}/notebooks",
     }
 
 
@@ -132,9 +151,33 @@ def build_manifest(
         f"  spark_notebook: projects/{project_id}/notebooks/spark/{short_name}.py"
     )
     lines.append(
+        f"  exploratory_notebook_dir: projects/{project_id}/notebooks/exploratory"
+    )
+    lines.append(
         f"  local_postprocess: projects/{project_id}/scripts/local/postprocess.py"
     )
+    lines.append(
+        f"  databricks_spark_notebook: {WORKSPACE_PREFIX}/{project_id}/notebooks/spark/{short_name}"
+    )
     return "\n".join(lines) + "\n"
+
+def _write_active_state(project_id: str, session_id: str, paths: dict) -> Path:
+    """Write or refresh .agent-state/active_project.json."""
+    AGENT_STATE_DIR.mkdir(parents=True, exist_ok=True)
+    state_file = AGENT_STATE_DIR / "active_project.json"
+    local_root = paths["local_root"]
+    state = {
+        "project_id": project_id,
+        "session_id": session_id,
+        "started_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "local_root": local_root,
+        "manifest_path": local_root + "/project.yaml",
+        "s3_root": paths["s3_root"],
+        "dbfs_root": paths["dbfs_root"],
+        "databricks_workspace_root": paths["databricks_workspace_root"],
+    }
+    state_file.write_text(json.dumps(state, indent=2) + "\n")
+    return state_file
 
 
 def scaffold_project(project_dir: Path, project_id: str, display_name: str) -> None:
@@ -183,12 +226,21 @@ def main() -> int:
     parser.add_argument("--short-name", type=str, required=True)
     parser.add_argument("--display-name", type=str, required=True)
     parser.add_argument("--ani-stamp", type=str, default=None)
+    parser.add_argument("--session-id", type=str, default=None,
+                        help="Session ID (default: auto-generated from current UTC time)")
+    parser.add_argument(
+        "--no-activate",
+        action="store_true",
+        help="Do not write .agent-state/active_project.json",
+    )
     parser.add_argument(
         "--create-remote",
         action="store_true",
         help="Print S3 mkdir commands (does not execute them)",
     )
     args = parser.parse_args()
+
+    session_id = args.session_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M")
 
     errors = validate_args(args.year, args.iso3, args.short_name)
     if errors:
@@ -204,10 +256,21 @@ def main() -> int:
     already_exists = project_dir.exists() and (project_dir / "project.yaml").exists()
 
     if already_exists:
+        if not args.no_activate:
+            _write_active_state(project_id, session_id, paths)
         result = {
             "created": False,
             "project_id": project_id,
+            "session_id": session_id,
+            "active_state_path": ".agent-state/active_project.json" if not args.no_activate else None,
             **paths,
+            "defaults": {
+                "spark_notebook": f"projects/{project_id}/notebooks/spark/{args.short_name}.py",
+                "exploratory_notebook_dir": f"projects/{project_id}/notebooks/exploratory",
+                "local_postprocess": f"projects/{project_id}/scripts/local/postprocess.py",
+                "databricks_spark_notebook": f"{WORKSPACE_PREFIX}/{project_id}/notebooks/spark/{args.short_name}",
+            },
+            "paths": {"databricks_workspace_root": paths["databricks_workspace_root"]},
         }
         print(json.dumps(result, indent=2))
         return 0
@@ -239,10 +302,23 @@ def main() -> int:
                 file=sys.stderr,
             )
 
+    # Activate by default
+    if not args.no_activate:
+        _write_active_state(project_id, session_id, paths)
+
     result = {
         "created": True,
         "project_id": project_id,
+        "session_id": session_id,
+        "active_state_path": ".agent-state/active_project.json" if not args.no_activate else None,
         **paths,
+        "defaults": {
+            "spark_notebook": f"projects/{project_id}/notebooks/spark/{args.short_name}.py",
+            "exploratory_notebook_dir": f"projects/{project_id}/notebooks/exploratory",
+            "local_postprocess": f"projects/{project_id}/scripts/local/postprocess.py",
+            "databricks_spark_notebook": f"{WORKSPACE_PREFIX}/{project_id}/notebooks/spark/{args.short_name}",
+        },
+        "paths": {"databricks_workspace_root": paths["databricks_workspace_root"]},
     }
     print(json.dumps(result, indent=2))
     return 0

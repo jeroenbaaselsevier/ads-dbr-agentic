@@ -30,6 +30,9 @@ All paths derive from `project_id` and `year`:
 | Local output | `projects/<project_id>/output` |
 | Local tmp | `projects/<project_id>/tmp` |
 | S3 cache | `s3://rads-projects/short_term/<year>/<project_id>/cache` |
+| S3 exports | `s3://rads-projects/short_term/<year>/<project_id>/exports` |
+| S3 logs | `s3://rads-projects/short_term/<year>/<project_id>/logs` |
+| Databricks notebooks | `/Workspace/rads/projects/<project_id>/notebooks` |
 
 ### 3. Active project state
 
@@ -39,11 +42,21 @@ Write `.agent-state/active_project.json` with:
   "project_id": "2026_NLD_journal_trend",
   "session_id": "20260318T1620",
   "started_at": "2026-03-18T16:20:00Z",
-  "local_root": "projects/2026_NLD_journal_trend"
+  "local_root": "projects/2026_NLD_journal_trend",
+  "manifest_path": "projects/2026_NLD_journal_trend/project.yaml",
+  "s3_root": "s3://rads-projects/short_term/2026/2026_NLD_journal_trend",
+  "dbfs_root": "/mnt/els/rads-projects/short_term/2026/2026_NLD_journal_trend",
+  "databricks_workspace_root": "/Workspace/rads/projects/2026_NLD_journal_trend"
 }
 ```
 
-Scripts and hooks read this to know where to write session artifacts.
+This is written automatically by `init_project.py` (default) and
+`activate_project.py`. Cleared on closeout.
+
+To resume an existing project:
+```bash
+python scripts/activate_project.py --project-id 2026_NLD_journal_trend
+```
 
 ### 4. Scaffolding
 
@@ -68,26 +81,22 @@ projects/<project_id>/
 
 ### 5. Session closeout
 
-At the end of a project session, run explicit closeout:
+At the end of a project session, run the explicit closeout sequence:
 
+**Step 1 — closeout:**
 ```bash
 python scripts/closeout_project.py \
     --project-id 2026_NLD_journal_trend \
     --session-id 20260318T1620 \
-    --status completed \
+    --session-status completed \
     --summary "Produced journal trend charts for 2015-2025" \
     --deliverables output/trend.png,output/trend.csv
 ```
 
-This produces:
-1. **Session summary** → `context/session-notes/<session_id>.md`
-2. **Lessons file** → `context/lessons/<session_id>.yaml` (fill in or use capture_lessons.py)
-3. **Deliverables manifest** → `context/deliverables.yaml` (appended)
-4. **Intake record** → `agent-improvement/inbox/` (cross-project lessons only)
+Use `--session-status` with values: `completed`, `paused`, or `blocked`.
+Optionally add `--project-status completed` when the entire project is done.
 
-### 6. Lesson capture
-
-For structured lessons, use:
+**Step 2 — structured lesson capture (if applicable):**
 ```bash
 echo '[{"scope":"global","memory_type":"semantic","category":"schema","summary":"...","confidence":"high"}]' | \
 python scripts/capture_lessons.py \
@@ -96,7 +105,18 @@ python scripts/capture_lessons.py \
     --from-json
 ```
 
-### 7. Agent interaction pattern
+**Step 3 — triage (periodic, outside the session loop):**
+```bash
+python scripts/triage_lessons.py
+```
+
+This produces:
+1. **Session summary** → `context/session-notes/<session_id>.md`
+2. **Lessons file** → `context/lessons/<session_id>.yaml` (fill in or use capture_lessons.py)
+3. **Deliverables manifest** → `context/deliverables.yaml` (appended)
+4. **Intake record** → `agent-improvement/inbox/` (cross-project lessons only)
+
+### 6. Agent interaction pattern
 
 When the user brings a new analysis task, propose the project like this:
 

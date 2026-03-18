@@ -148,10 +148,18 @@ def validate(verbose: bool = True) -> list:
         )
 
     # 10. Check project lifecycle scripts exist
-    for script in ["init_project.py", "closeout_project.py", "capture_lessons.py", "triage_lessons.py"]:
+    for script in ["init_project.py", "closeout_project.py", "capture_lessons.py", "triage_lessons.py", "activate_project.py"]:
         check_file_exists(
             REPO_ROOT / "scripts" / script,
             f"project lifecycle script {script}",
+            errors,
+        )
+
+    # 11. Check tools exist
+    for tool_path in ["tools/local/postprocess.py", "tools/databricks/deploy_and_run.py"]:
+        check_file_exists(
+            REPO_ROOT / tool_path,
+            f"tool {tool_path}",
             errors,
         )
 

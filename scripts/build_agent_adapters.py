@@ -207,6 +207,33 @@ def build_all(check_mode: bool = False) -> int:
             check_mode,
         )
 
+    # 9. Copilot: project-resources.agent.md
+    tmpl = platform / "copilot/templates/project-resources.agent.md.j2"
+    content = render(tmpl, CONFIG)
+    drift_count += write_generated(
+        REPO_ROOT / ".github/agents/project-resources.agent.md",
+        content,
+        check_mode,
+    )
+
+    # 10. Claude: project-resources skill
+    tmpl = platform / "claude/templates/project-resources.SKILL.md.j2"
+    content = render(tmpl, CONFIG)
+    drift_count += write_generated(
+        REPO_ROOT / ".claude/skills/project-resources/SKILL.md",
+        content,
+        check_mode,
+    )
+
+    # 11. Codex: project-resources skill
+    tmpl = platform / "codex/templates/project-resources.SKILL.md.j2"
+    content = render(tmpl, CONFIG)
+    drift_count += write_generated(
+        REPO_ROOT / ".agents/skills/project-resources/SKILL.md",
+        content,
+        check_mode,
+    )
+
     return drift_count
 
 

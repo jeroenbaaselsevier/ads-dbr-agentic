@@ -32,6 +32,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROJECTS_DIR = REPO_ROOT / "projects"
 INBOX_DIR = REPO_ROOT / "agent-improvement" / "inbox"
+AGENT_STATE_DIR = REPO_ROOT / ".agent-state"
 
 
 def write_session_summary(
@@ -178,10 +179,22 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Finalize a project session")
     parser.add_argument("--project-id", required=True)
     parser.add_argument("--session-id", required=True)
+    # --status kept as alias for backward compat; prefer --session-status
     parser.add_argument(
         "--status",
-        required=True,
         choices=["completed", "paused", "blocked"],
+        help="Session status (alias for --session-status, kept for compat)",
+    )
+    parser.add_argument(
+        "--session-status",
+        choices=["completed", "paused", "blocked"],
+        help="Session status: completed | paused | blocked",
+    )
+    parser.add_argument(
+        "--project-status",
+        choices=["active", "completed", "archived"],
+        default=None,
+        help="Project lifecycle status (only set when the entire project is done)",
     )
     parser.add_argument("--summary", default=None)
     parser.add_argument(
@@ -190,6 +203,12 @@ def main() -> int:
         help="Comma-separated list of output paths",
     )
     args = parser.parse_args()
+
+    # Resolve session status: --session-status takes priority over --status
+    session_status = args.session_status or args.status
+    if not session_status:
+        print("ERROR: provide --session-status or --status", file=sys.stderr)
+        return 1
 
     project_dir = PROJECTS_DIR / args.project_id
     if not project_dir.exists():
@@ -205,7 +224,7 @@ def main() -> int:
         project_dir,
         args.session_id,
         args.project_id,
-        args.status,
+        session_status,
         args.summary,
         deliverable_list,
     )
@@ -224,9 +243,18 @@ def main() -> int:
         args.session_id, args.project_id, lessons_file
     )
 
-    # 5. Update project status if completed
-    if args.status == "completed":
-        update_project_status(project_dir, "completed")
+    # 5. Update project status if explicitly set, or infer from session
+    if args.project_status:
+        update_project_status(project_dir, args.project_status)
+    elif session_status == "completed" and not args.project_status:
+        # Session completed does NOT auto-set project to completed;
+        # a project may span multiple sessions.
+        pass
+
+    # 6. Clear active project state
+    active_state = AGENT_STATE_DIR / "active_project.json"
+    if active_state.exists():
+        active_state.unlink()
 
     result = {
         "session_summary": str(summary_file.relative_to(REPO_ROOT)),

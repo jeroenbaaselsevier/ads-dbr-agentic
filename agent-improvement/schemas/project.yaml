@@ -23,9 +23,12 @@ derived_paths:
 derived_folders:
   local_output: "projects/<id>/output"
   local_tmp: "projects/<id>/tmp"
-  spark_cache: "/mnt/els/rads-projects/short_term/<year>/<id>/cache"
+  dbfs_cache: "/mnt/els/rads-projects/short_term/<year>/<id>/cache"
   s3_output: "s3://rads-projects/short_term/<year>/<id>/output"
   s3_cache: "s3://rads-projects/short_term/<year>/<id>/cache"
+  s3_exports: "s3://rads-projects/short_term/<year>/<id>/exports"
+  s3_logs: "s3://rads-projects/short_term/<year>/<id>/logs"
+  databricks_notebooks_root: "/Workspace/rads/projects/<id>/notebooks"
 
 enums:
   status:
@@ -74,10 +77,15 @@ example: |
   folders:
     local_output: projects/2026_NLD_journal_trend/output
     local_tmp: projects/2026_NLD_journal_trend/tmp
-    spark_cache: /mnt/els/rads-projects/short_term/2026/2026_NLD_journal_trend/cache
+    dbfs_cache: /mnt/els/rads-projects/short_term/2026/2026_NLD_journal_trend/cache
     s3_output: s3://rads-projects/short_term/2026/2026_NLD_journal_trend/output
     s3_cache: s3://rads-projects/short_term/2026/2026_NLD_journal_trend/cache
+    s3_exports: s3://rads-projects/short_term/2026/2026_NLD_journal_trend/exports
+    s3_logs: s3://rads-projects/short_term/2026/2026_NLD_journal_trend/logs
+    databricks_notebooks_root: /Workspace/rads/projects/2026_NLD_journal_trend/notebooks
 
   defaults:
     spark_notebook: projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py
+    exploratory_notebook_dir: projects/2026_NLD_journal_trend/notebooks/exploratory
     local_postprocess: projects/2026_NLD_journal_trend/scripts/local/postprocess.py
+    databricks_spark_notebook: /Workspace/rads/projects/2026_NLD_journal_trend/notebooks/spark/journal_trend

@@ -12,8 +12,12 @@ runs.
 - Apply `nopp()` as first filter when ANI is the primary table
 - Wrap expensive steps in `df_cached()`
 - Use correct join types and type conversions from the query contract
-- Store the notebook in `notebooks/<shortname>/` (see `rules/output-contract.md`)
-- Deploy via `./deploy.sh notebooks/<name>.py --run`
+- **New work:** store the notebook in `projects/<project_id>/notebooks/spark/`
+  (see `rules/output-contract.md`)
+- **Legacy (untouched):** existing code under `notebooks/<shortname>/` is
+  still supported — do not move it unless the user is actively modifying it
+- Deploy via `./deploy.sh projects/<project_id>/notebooks/spark/<name>.py --run`
+  (deploy.sh reads `project.yaml` to derive the remote path automatically)
 - Monitor via `./poll_run.sh <run_id>` until terminal state
 - Decode and return the result output (see `runbooks/databricks.md`)
 

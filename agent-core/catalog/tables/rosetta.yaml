@@ -1,0 +1,33 @@
+name: Rosetta
+aliases: [rosetta, journal metadata, source mapping, publisher, imprint, srcid]
+spark_table: "mi_team.rosetta_{snapshot}"
+helper: "snapshot_functions.rosetta.get_table(snapshot=None, current_only=True)"
+
+primary_key:
+  name: srcid
+  type: string
+
+join_rules:
+  default_join_type: left
+  join_to_ani: "Rosetta.srcid (string) = cast(ANI.source.srcid as string)"
+  required_conversions:
+    - function: "cast(ANI.source.srcid as string)"
+      produces: srcid
+      reason: "ANI stores source.srcid as long; Rosetta uses string"
+  coverage: partial
+  caveat: >
+    Rosetta is a source-reference enrichment table. Always LEFT JOIN from ANI.
+    Prefer current unsuffixed fields over yearly variants when both exist.
+
+freshness:
+  snapshot_rule: explicit_or_latest
+
+references:
+  summary: agent-core/references/rosetta.md
+  examples:
+    - agent-core/recipes/journal-output-trend.md
+
+validators:
+  - cast_ani_srcid_to_string
+  - use_left_join_to_ani
+  - prefer_current_only_fields

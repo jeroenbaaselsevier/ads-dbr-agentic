@@ -9,10 +9,15 @@ from S3, producing charts and tables, and creating the final client deliverable.
 - Read parquet from S3 via `pyarrow.parquet` + `S3FileSystem`
 - Use DuckDB for GROUP BY, JOIN, and window operations on large parquet
 - Use pandas for final formatting, pivots, and chart data prep
-- Write charts to `./output/` (PNG/HTML) and report paths to the user
-- Write Excel/CSV deliverables to `./output/` via `pandas.to_excel()` or
+- **Project-scoped (preferred for new work):**
+  - Write charts to `projects/<project_id>/output/` (PNG/HTML)
+  - Write Excel/CSV deliverables to `projects/<project_id>/output/`
+  - Write intermediate files to `projects/<project_id>/tmp/`
+- **Legacy / one-off fallback:**
+  - Charts and deliverables to `./output/`
+  - Intermediate files to `./tmp/`
+- Report output paths to the user via `pandas.to_excel()` or
   `dataframe_functions.export_df_csv()`
-- Write intermediate files to `./tmp/` (never share these paths)
 - Flag any missing package to the user, install it, and self-patch
   `requirements.txt` + `runbooks/local-python.md`
 

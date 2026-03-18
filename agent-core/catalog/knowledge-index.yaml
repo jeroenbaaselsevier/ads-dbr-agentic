@@ -6,7 +6,7 @@
 tables:
 
   - name: ANI
-    reference: .github/agents/references/ani.md
+    reference: agent-core/references/ani.md
     spark_table: "scopus.ani_{stamp}"
     primary_key: "Eid (long)"
     join_to_ani: "primary table"
@@ -35,7 +35,7 @@ tables:
       The string form is "2-s2.0-" + zero-padded 10-digit number.
 
   - name: APR
-    reference: .github/agents/references/apr.md
+    reference: agent-core/references/apr.md
     spark_table: "scopus.apr_{stamp}"
     primary_key: "auid (long)"
     join_to_ani: >
@@ -58,7 +58,7 @@ tables:
       per author.
 
   - name: OrgDB
-    reference: .github/agents/references/orgdb.md
+    reference: agent-core/references/orgdb.md
     spark_table: "orgdb_support (multiple tables)"
     primary_key: "org_id (string)"
     join_to_ani: >
@@ -82,7 +82,7 @@ tables:
       Type mismatch: afid is long in ANI, string in OrgDB.
 
   - name: Source
-    reference: .github/agents/references/source.md
+    reference: agent-core/references/source.md
     primary_key: "id (long)"
     join_to_ani: >
       Source.id ↔ ANI.source.srcid (both long). Only ~6.8% of ANI srcid
@@ -105,7 +105,7 @@ tables:
       are matched.
 
   - name: Rosetta
-    reference: .github/agents/references/rosetta.md
+    reference: agent-core/references/rosetta.md
     spark_table: "mi_team.rosetta_{snapshot}"
     primary_key: "srcid (string)"
     join_to_ani: >
@@ -134,7 +134,7 @@ tables:
       get_table(current_only=True).
 
   - name: SciVal
-    reference: .github/agents/references/scival.md
+    reference: agent-core/references/scival.md
     primary_key: "EidString (string, '2-s2.0-...' form)"
     join_to_ani: >
       SciVal.topic_eid.EidString = long_eid_to_eidstr(ANI.Eid).
@@ -156,7 +156,7 @@ tables:
       Convert EID with long_eid_to_eidstr() before joining.
 
   - name: SDG
-    reference: .github/agents/references/sdg.md
+    reference: agent-core/references/sdg.md
     primary_key: "eid (long)"
     join_to_ani: >
       SDG.eid = ANI.Eid (direct long match, no conversion needed).
@@ -173,7 +173,7 @@ tables:
       the SDG label string.
 
   - name: Patents
-    reference: .github/agents/references/patents.md
+    reference: agent-core/references/patents.md
     primary_key: "eid (long) in npl_citations_scopus"
     join_to_ani: >
       Patents.npl_citations_scopus.eid = ANI.Eid (direct long match).
@@ -193,7 +193,7 @@ tables:
       patents.join_npl_citations() helper. Cache large intermediate steps.
 
   - name: ADS
-    reference: .github/agents/references/ads-derived/README.md
+    reference: agent-core/references/ads-derived/README.md
     primary_key: "EID (long)"
     join_to_ani: >
       ADS tables EID = ANI.Eid (direct long match). ADS includes all
@@ -227,7 +227,7 @@ tables:
       Access: snapshot_functions.ads.publication.get_table('TableName').
 
 library:
-  reference: .github/agents/references/library.md
+  reference: agent-core/references/library.md
   keywords:
     - library
     - column_functions
@@ -257,7 +257,7 @@ library:
 runbooks:
 
   - name: databricks
-    reference: .github/agents/runbooks/databricks-runbook.md
+    reference: agent-core/runbooks/databricks.md
     keywords:
       - deploy
       - deploy.sh
@@ -274,7 +274,7 @@ runbooks:
       - COMMAND
 
   - name: local-python
-    reference: .github/agents/runbooks/local-python-runbook.md
+    reference: agent-core/runbooks/local-python.md
     keywords:
       - venv
       - requirements.txt
@@ -301,7 +301,7 @@ runbooks:
       - share_dataframe
 
   - name: aws-and-s3
-    reference: .github/agents/runbooks/aws-and-s3-runbook.md
+    reference: agent-core/runbooks/aws-and-s3.md
     keywords:
       - s3
       - aws
@@ -319,7 +319,7 @@ runbooks:
 recipes:
 
   - name: retraction-watch
-    reference: .github/agents/recipes/retraction-watch.md
+    reference: agent-core/recipes/retraction-watch.md
     keywords:
       - retraction
       - retracted
@@ -328,7 +328,7 @@ recipes:
       - retracted paper
 
   - name: fwci-citation-analysis
-    reference: .github/agents/recipes/fwci-citation-analysis.md
+    reference: agent-core/recipes/fwci-citation-analysis.md
     keywords:
       - fwci
       - field weighted citation impact
@@ -336,7 +336,7 @@ recipes:
       - benchmarking
 
   - name: edc-cross-account-access
-    reference: .github/agents/recipes/edc-cross-account-access.md
+    reference: agent-core/recipes/edc-cross-account-access.md
     keywords:
       - edc
       - external dataset
@@ -347,7 +347,7 @@ recipes:
       - sccontent
 
   - name: gender-analysis
-    reference: .github/agents/recipes/gender-analysis.md
+    reference: agent-core/recipes/gender-analysis.md
     keywords:
       - gender
       - genderize
@@ -358,7 +358,7 @@ recipes:
       - author gender
 
   - name: collaboration-analysis
-    reference: .github/agents/recipes/collaboration-analysis.md
+    reference: agent-core/recipes/collaboration-analysis.md
     keywords:
       - collaboration
       - international collaboration
@@ -367,7 +367,7 @@ recipes:
       - orgdb hierarchy
 
   - name: journal-output-trend
-    reference: .github/agents/recipes/journal-output-trend.md
+    reference: agent-core/recipes/journal-output-trend.md
     keywords:
       - journal
       - publication output
@@ -377,7 +377,7 @@ recipes:
       - portfolio
 
   - name: oa-analysis
-    reference: .github/agents/recipes/oa-analysis.md
+    reference: agent-core/recipes/oa-analysis.md
     keywords:
       - open access
       - oa
@@ -389,7 +389,7 @@ recipes:
       - openaccess
 
   - name: sdg-analysis
-    reference: .github/agents/recipes/sdg-analysis.md
+    reference: agent-core/recipes/sdg-analysis.md
     keywords:
       - sdg
       - sustainable development goals
@@ -397,7 +397,7 @@ recipes:
       - sdg classification
 
   - name: scival-topic-analysis
-    reference: .github/agents/recipes/scival-topic-analysis.md
+    reference: agent-core/recipes/scival-topic-analysis.md
     keywords:
       - scival topic
       - topic cluster
@@ -415,7 +415,7 @@ recipes:
       - citescore complete
 
   - name: patents-citation-analysis
-    reference: .github/agents/recipes/patents-citation-analysis.md
+    reference: agent-core/recipes/patents-citation-analysis.md
     keywords:
       - patent citation
       - npl citation

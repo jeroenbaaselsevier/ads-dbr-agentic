@@ -69,17 +69,42 @@ def main() -> int:
                     run_id = part
                     break
 
+    # Derive actual remote notebook path from project manifest if available
+    remote_path = _resolve_remote_path(notebook)
+
     print(
         json.dumps(
             {
                 "run_id": run_id,
-                "notebook_path_remote": str(notebook),
+                "notebook_path_local": str(notebook),
+                "notebook_path_remote": remote_path,
                 "status": "started",
                 "raw_output": result.stdout,
             }
         )
     )
     return 0
+
+
+def _resolve_remote_path(notebook: Path) -> str:
+    """Derive the remote Databricks notebook path from the project manifest."""
+    search_dir = notebook.parent
+    while search_dir != search_dir.parent:
+        manifest = search_dir / "project.yaml"
+        if manifest.exists():
+            try:
+                import yaml
+                data = yaml.safe_load(manifest.read_text())
+                ws_root = (data or {}).get("paths", {}).get("databricks_workspace_root", "")
+                if ws_root:
+                    rel = str(notebook.relative_to(search_dir))
+                    rel_no_ext = rel.rsplit(".py", 1)[0]
+                    return f"{ws_root}/{rel_no_ext}"
+            except Exception:
+                pass
+            break
+        search_dir = search_dir.parent
+    return str(notebook)
 
 
 if __name__ == "__main__":

@@ -13,17 +13,25 @@ internal checklist the orchestrator runs through.
 - [ ] `afid` is cast to string before joining to OrgDB
 - [ ] ANI `Eid` is converted with `long_eid_to_eidstr()` before joining SciVal
 - [ ] Every expensive intermediate step uses `df_cached()`
-- [ ] The notebook is saved under `notebooks/<shortname>/` in the git repo
+- [ ] **New work:** notebook is under `projects/<project_id>/notebooks/spark/`
+- [ ] **Legacy:** existing `notebooks/<shortname>/` is acceptable for untouched code
 - [ ] `ani_stamp` uses a first-of-month date (e.g. `20260301`, not `20260312`)
 - [ ] No credentials embedded in the notebook
 - [ ] Project path follows `<year>_<CCC>_<shortname>` convention
 
 ### Output correctness
-- [ ] Chart files are saved to `./output/`, not `./tmp/`
-- [ ] User is informed of `./output/` paths
+- [ ] **New work:** deliverables saved to `projects/<project_id>/output/`, not `tmp/`
+- [ ] **Legacy / one-off:** deliverables in `./output/`, not `./tmp/`
+- [ ] User is informed of output paths
 - [ ] Column names in results match documented schema (no hallucinated columns)
 - [ ] Aggregation logic is correct (correct grain, no double-counting from
   exploded arrays)
+
+### Project consistency (new work)
+- [ ] `projects/<project_id>/project.yaml` exists and `status` is `active`
+- [ ] `.agent-state/active_project.json` matches the project being worked on
+- [ ] Temp files are in `projects/<project_id>/tmp/`, not root `./tmp/`
+- [ ] Deploy path derived from manifest (not a user workspace path)
 
 ### Coverage warnings provided
 - [ ] If coverage < 100%, the user is told the expected match rate
