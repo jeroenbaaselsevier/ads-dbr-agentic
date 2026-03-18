@@ -291,6 +291,14 @@ runbooks:
       - excel
       - local processing
       - activate
+      - share file
+      - download link
+      - public link
+      - shareable url
+      - share output
+      - rads-custom-data
+      - share_file_path
+      - share_dataframe
 
   - name: aws-and-s3
     reference: .github/agents/runbooks/aws-and-s3-runbook.md
