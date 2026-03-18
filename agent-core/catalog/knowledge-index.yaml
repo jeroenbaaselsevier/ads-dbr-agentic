@@ -104,6 +104,33 @@ tables:
       SJR, ISSN, ASJC classification. LEFT JOIN — only 6.8% of ANI srcids
       are matched.
 
+  - name: Rosetta
+    reference: .github/agents/references/rosetta.md
+    spark_table: "mi_team.rosetta_{snapshot}"
+    primary_key: "srcid (string)"
+    join_to_ani: >
+      Rosetta.srcid (string) ↔ ANI.source.srcid (long). Cast ANI.source.srcid
+      to string before joining. Always LEFT JOIN from ANI.
+    keywords:
+      - rosetta
+      - journal metadata
+      - source mapping
+      - srcid
+      - issn
+      - publisher
+      - imprint
+      - cwts
+      - crossref
+      - jcr
+      - nlm
+      - snapshot
+      - mi_team
+    summary: >
+      Metastore snapshots in mi_team named rosetta_YYYYMMDD.
+      Journal/source reference mappings (ISSN variants, publisher/imprint,
+      external IDs, BM/ELS classification fields). Use
+      snapshot_functions.rosetta.list_snapshots() and get_table().
+
   - name: SciVal
     reference: .github/agents/references/scival.md
     primary_key: "EidString (string, '2-s2.0-...' form)"
