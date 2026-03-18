@@ -10,6 +10,7 @@ triggers:
 required_tables:
   - ANI
   - Source
+  - Rosetta
 required_functions:
   - column_functions.nopp
   - dataframe_functions.df_cached
@@ -18,9 +19,11 @@ common_outputs:
   - csv
 pitfalls:
   - Source coverage is only ~6.8% of ANI srcids — left join
+  - For publisher evaluation, use Rosetta current publisher fields
   - discover srcid first if not known
 review_checks:
   - verify left join to Source
+  - verify Rosetta used for publisher evaluation (not Source)
   - verify nopp() on ANI
   - verify srcid discovery cell present when srcid not known in advance
 ---
@@ -33,7 +36,8 @@ enrichment (OA type, document type, subject area, citation metrics).
 
 ## Prerequisites
 - ANI snapshot stamp
-- Source profiles (for CiteScore, publisher info)
+- Source profiles (for CiteScore and source metadata)
+- Rosetta snapshots (for publisher evaluation)
 
 ## Discover a journal's srcid first
 
@@ -87,13 +91,24 @@ df_yearly = df_journal.groupBy('sort_year').agg(
 df_yearly.show(40)
 
 # COMMAND ----------
-# Optional: enrich with source profile (CiteScore, publisher)
+# Optional: enrich with Source profile for CiteScore and title metadata
 df_source = snapshot_functions.source.get_table('source_profiles')
 # Join key: source profile `id` (long) ↔ ANI `source.srcid` (long)
 df_meta = df_source.filter(F.col('id') == SRCID).select(
-    'id', 'source_title', 'publisher', 'citescore'
+  'id', 'source_title', 'citescore'
 )
 df_meta.show()
+
+# COMMAND ----------
+# Optional: evaluate publisher via Rosetta (preferred for publisher assessments)
+df_rosetta_pub = snapshot_functions.rosetta.get_publisher_view(
+  current_only=True,
+  include_bm=True,
+  include_imprint=True,
+)
+
+df_pub = df_rosetta_pub.filter(F.col('srcid') == F.lit(str(SRCID)))
+df_pub.show()
 
 # COMMAND ----------
 # Export

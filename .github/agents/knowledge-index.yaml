@@ -128,8 +128,10 @@ tables:
     summary: >
       Metastore snapshots in mi_team named rosetta_YYYYMMDD.
       Journal/source reference mappings (ISSN variants, publisher/imprint,
-      external IDs, BM/ELS classification fields). Use
-      snapshot_functions.rosetta.list_snapshots() and get_table().
+      external IDs, BM/ELS classification fields). For evaluations, prefer
+      current unsuffixed fields (e.g. publisher, bm) over yearly variants.
+      Use snapshot_functions.rosetta.list_snapshots() and
+      get_table(current_only=True).
 
   - name: SciVal
     reference: .github/agents/references/scival.md

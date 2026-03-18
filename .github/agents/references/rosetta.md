@@ -12,6 +12,16 @@ snapshots = sf.rosetta.list_snapshots()      # newest first
 # latest snapshot
 df_rosetta = sf.rosetta.get_table()
 
+# latest snapshot, evaluation-friendly current columns only
+df_rosetta_current = sf.rosetta.get_table(current_only=True)
+
+# publisher evaluation view
+df_rosetta_pub = sf.rosetta.get_publisher_view(
+    current_only=True,
+    include_bm=True,
+    include_imprint=True,
+)
+
 # specific snapshot
 df_rosetta = sf.rosetta.get_table('20251022')
 ```
@@ -60,3 +70,9 @@ Observed latest schema profile:
 
 - Snapshot selection should use closest-date logic when exact date is absent.
 - Keep this as a metastore read (`spark.table`), not DBFS path loading.
+- Annual fields evolve over time (new years added), but most evaluations should
+    use current unsuffixed fields (for example `publisher`, `imprint`, `bm`).
+    Use `current_only=True` to drop `*_YYYY` variants when the current base
+    column exists.
+- For publisher-focused evaluation, use
+    `snapshot_functions.rosetta.get_publisher_view(...)`.

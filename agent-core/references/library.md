@@ -110,8 +110,9 @@ Scopus Citation Database helpers.
 | `ads.author.get_table(name, ...)` | Load an author-level ADS metrics table. |
 | `ads.author.list()` | List available ADS author table names. |
 | `source.get_table(name, ...)` | Load a source profile table. |
-| `rosetta.get_table(snapshot=None)` | Load Rosetta journal/source mapping table from `mi_team.rosetta_YYYYMMDD`. |
+| `rosetta.get_table(snapshot=None, current_only=False)` | Load Rosetta journal/source mapping table from `mi_team.rosetta_YYYYMMDD`; set `current_only=True` to prefer unsuffixed current fields over `*_YYYY` variants. |
 | `rosetta.list_snapshots()` | List available Rosetta snapshots (YYYYMMDD, newest first). |
+| `rosetta.get_publisher_view(snapshot=None, current_only=True, include_bm=False, include_imprint=False)` | Publisher-evaluation projection from Rosetta (`srcid`, `publisher`, optional `bm` and `imprint`). |
 | `patents.get_table(name, ...)` | Load a patents table (`metadata` or `npl_citations_scopus`). |
 | `sdg.get_table(with_labels=False, ...)` | Load the SDG classification table. |
 | `topic_burst.topic.get_table(year=None)` | Load topic-level burst scores. `year` defaults to latest. Primary key: `TopicID`. |
