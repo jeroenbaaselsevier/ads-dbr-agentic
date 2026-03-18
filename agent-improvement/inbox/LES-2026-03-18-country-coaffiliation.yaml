@@ -1,0 +1,198 @@
+# Lessons from country co-affiliation analysis session (2026-03-18)
+# Project: 2026_INTERNAL_coaffiliation
+# Session: 20260318 country-level MCA (multi-country affiliation) analysis
+# Converted to structured YAML for inbox intake
+
+source_project: 2026_INTERNAL_coaffiliation
+source_session: 20260318_country_coaffiliation
+captured_at: 2026-03-18T12:36:00Z
+carrier_role: project-resources
+lessons:
+  
+  - id: LES-2026-03-18-001
+    project_id: 2026_INTERNAL_coaffiliation
+    scope: global
+    memory_type: semantic
+    category: schema
+    confidence: high
+    impact: high
+    status: captured
+    recurrence_hint: systematic
+    summary: >
+      OrgDB `threelettercountry` values contain trailing whitespace
+      (e.g., `'usa '`, `'fra '`). Must normalize with trim() before
+      dedup/grouping to avoid spurious same-country pairs.
+    observed_in:
+      - projects/2026_INTERNAL_coaffiliation/notebooks/spark/
+    suggested_action:
+      target: agent-core/references/orgdb.md
+      change_type: doc_update
+      proposed_eval: orgdb-whitespace-caveat
+    notes: >
+      Also add mandatory QA check to reviewer role: verify no same-country
+      pairs in canonical pair outputs across all analysis patterns.
+
+  - id: LES-2026-03-18-002
+    project_id: 2026_INTERNAL_coaffiliation
+    scope: global
+    memory_type: procedural
+    category: output_style
+    confidence: high
+    impact: high
+    status: captured
+    recurrence_hint: repeated
+    summary: >
+      Analysis reports mixing paper-level and author-pool indicators
+      require explicit "Universe Declaration" block at start:
+      paper-level universe, author-level universe, any pool restrictions.
+      Compute sensitivity analyses (paper-level both all-authors and pool-only)
+      to preempt stakeholder confusion.
+    observed_in:
+      - output/coaffiliation/findings.md
+      - output/coaffiliation/country_coaffiliation_results.xlsx
+    suggested_action:
+      target: agent-core/recipes/analysis-universe-declaration.md
+      change_type: new_rule
+      proposed_eval: universe-clarity-in-reports
+    notes: >
+      Stakeholders repeatedly asked whether paper-level MCA applied pool
+      restrictions. Template prevents future confusion.
+
+  - id: LES-2026-03-18-003
+    project_id: 2026_INTERNAL_coaffiliation
+    scope: global
+    memory_type: procedural
+    category: output_style
+    confidence: high
+    impact: medium
+    status: captured
+    recurrence_hint: repeated
+    summary: >
+      Null-model documentation must define all notation (e.g.,
+      N_total_MCA_authors, N_total_events) with a definitions table
+      including: symbol, meaning, current-run value, fixed vs dynamic.
+      Explicitly state when counts are NOT globally de-duplicated.
+    observed_in:
+      - output/coaffiliation/findings.md
+    suggested_action:
+      target: agent-core/recipes/null-model-template.md
+      change_type: doc_update
+    notes: >
+      Prevents stakeholder interpretation of aggregates as global constants.
+
+  - id: LES-2026-03-18-004
+    project_id: 2026_INTERNAL_coaffiliation
+    scope: global
+    memory_type: procedural
+    category: workflow
+    confidence: high
+    impact: medium
+    status: captured
+    recurrence_hint: systematic
+    summary: >
+      Prevent stale narrative numbers in reports: add QA step that
+      re-reads key values from current CSVs before finalizing
+      markdown/PDF. Use templated insertion for critical metrics
+      (top pairs, totals, examples).
+    observed_in:
+      - output/coaffiliation/second_email_response.md
+      - output/coaffiliation/findings.md
+    suggested_action:
+      target: agent-core/runbooks/local-python.md
+      change_type: doc_update
+      proposed_eval: report-data-consistency
+    notes: >
+      Example: narrative cited pair enrichment that diverged from
+      refreshed sheet output after reruns.
+
+  - id: LES-2026-03-18-005
+    project_id: 2026_INTERNAL_coaffiliation
+    scope: global
+    memory_type: procedural
+    category: output_style
+    confidence: high
+    impact: low
+    status: captured
+    recurrence_hint: first_time
+    summary: >
+      Markdown-to-PDF converters (e.g., WeasyPrint) lack JS math support
+      for raw LaTeX. Standardize to either plain-text expressions or
+      formula rendered to PNG/SVG embedded in markdown.
+    observed_in:
+      - output/coaffiliation/findings.md
+    suggested_action:
+      target: agent-core/runbooks/local-python.md
+      change_type: doc_update
+    notes: >
+      Low impact — affects only LaTeX-heavy reports. Document the limitation
+      in local report generation runbook.
+
+  - id: LES-2026-03-18-006
+    project_id: 2026_INTERNAL_coaffiliation
+    scope: global
+    memory_type: procedural
+    category: output_style
+    confidence: high
+    impact: medium
+    status: captured
+    recurrence_hint: repeated
+    summary: >
+      Comparable heatmaps must enforce strict consistency in bins, labels,
+      and scope. When one chart is a subset (e.g., top-40), include a
+      full-universe table in Excel for reference even if image uses subset.
+      Explicitly note subset status in captions.
+    observed_in:
+      - output/coaffiliation/country_coaffiliation_results.xlsx
+    suggested_action:
+      target: agent-core/recipes/charting-and-heatmap-template.md
+      change_type: doc_update
+    notes: >
+      Stakeholder confusion when field and subfield heatmaps used different
+      period labels/layouts.
+
+  - id: LES-2026-03-18-007
+    project_id: 2026_INTERNAL_coaffiliation
+    scope: global
+    memory_type: procedural
+    category: output_style
+    confidence: high
+    impact: medium
+    status: captured
+    recurrence_hint: repeated
+    summary: >
+      Standardize null-model Excel deliverables to include both
+      significance-sorted (by enrichment ratio) and volume-sorted views.
+      Top-by-enrichment is dominated by tiny expected values from microstates;
+      top-by-volume is more interpretable for domain stakeholders.
+      Optionally include substantive-pairs view (expected_events >= threshold).
+    observed_in:
+      - output/coaffiliation/country_coaffiliation_results.xlsx
+    suggested_action:
+      target: agent-core/recipes/null-model-reporting.md
+      change_type: doc_update
+    notes: >
+      Two standard sorts prevent confusion and meet different stakeholder
+      analysis needs.
+
+  - id: LES-2026-03-18-008
+    project_id: 2026_INTERNAL_coaffiliation
+    scope: global
+    memory_type: procedural
+    category: output_style
+    confidence: high
+    impact: low
+    status: captured
+    recurrence_hint: first_time
+    summary: >
+      Percentage display in Excel workbook cells requires intentional
+      formatting. Cells carrying percentage values must have percent number
+      format applied. Keep data values and display strategy documented
+      to prevent accidental 100x scaling mistakes.
+    observed_in:
+      - output/coaffiliation/country_coaffiliation_results.xlsx
+    suggested_action:
+      target: agent-core/runbooks/local-python.md
+      change_type: doc_update
+    notes: >
+      Low impact but easy to standardize. Add to workbook generation
+      helper utilities / report scripts guidance.

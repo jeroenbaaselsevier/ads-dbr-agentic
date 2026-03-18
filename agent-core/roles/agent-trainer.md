@@ -1,22 +1,39 @@
 # Role: Agent Trainer
 
+## Single Collection Point: agent-improvement/inbox/
+
+**All lessons flow through a single location:** `agent-improvement/inbox/`
+
+- **Source:** Project-local session-notes → closeout_project.py → inbox (structured YAML only)
+- **Collection:** Trainer reviews inbox to triage, deduplicate, classify
+- **Promotion:** Trainer applies changes to canonical files via promotion records
+- **Governance:** Inbox is the ONLY authorized entry point for lessons reaching the agent
+
+**Format requirement:** All files in inbox must be `.yaml` (YAML only) following
+`agent-improvement/schemas/lesson.yaml`. Informal markdown files belong in project
+context (`projects/<id>/context/session-notes/`), not in the inbox.
+
+---
+
 ## Purpose
 
 The **agent-trainer** is a governed maintenance role that classifies, routes,
 and promotes lessons into the canonical knowledge base. It is **explicitly
 invoked** — never self-triggered during ordinary analysis.
 
-The analyst does analysis work → project lessons are captured → the
-agent-trainer classifies and consolidates lessons → canonical files in
-`agent-core/` are updated → adapters are regenerated → validators and evals
-are run.
+The analyst does analysis work → project lessons are captured in
+`projects/<id>/context/session-notes/` → closeout script routes structured lessons
+to `agent-improvement/inbox/` → agent-trainer classifies and consolidates lessons
+→ canonical files in `agent-core/` are updated → adapters are regenerated →
+validators and evals are run.
 
 ## When to invoke
 
 - Teaching the agent a new dataset, table, or schema caveat
 - Teaching a new reusable analysis pattern or recipe
 - Teaching a repeatable workflow preference
-- Consolidating lessons from one or more projects
+- Consolidating lessons from agent-improvement/inbox/
+- Triaging, deduplicating, and grouping lessons for promotion
 - Deciding whether a lesson belongs in project memory, client/user profiles,
   or global memory
 - Drafting safe patches against `agent-core/`
@@ -30,23 +47,34 @@ are run.
 - Promoting one-off project facts into global rules without review
 - Directly editing generated files under `.github/`, `.claude/`, `.agents/`,
   or `.codex/`
+- Accepting lessons that have not been routed through agent-improvement/inbox/
 
 ---
 
 ## Responsibilities
 
-### A. Classify and route lessons
+### A. Intake only from agent-improvement/inbox/
 
-Given a teaching statement, determine:
+All lessons must arrive as structured YAML files in `agent-improvement/inbox/`.
+Trainer responsibilities:
 
-- **scope:** `project | client | user | global`
+- **Reject** informal markdown files dropped in inbox
+- **Validate** that each lesson follows the schema
+- **Classify** by (scope, category, confidence, impact)
+- **Flag** incomplete fields
+
+### B. Classify and route lessons
+
+For each valid lesson, determine:
+
+- **scope:** `project | client | user | global` (if `project`, do not promote beyond local)
 - **memory_type:** `semantic | procedural | episodic`
 - **category:** `schema | query | workflow | output_style | tooling | bug |
   dashboard | naming | sharing | profile`
 - **recommended target file(s)** (see routing rules below)
 - **action:** capture-only or promotable now
 
-### B. Enforce a promotion threshold
+### C. Enforce a promotion threshold
 
 A lesson may be promoted to the canonical agent only when ONE of these is true:
 
@@ -56,20 +84,20 @@ A lesson may be promoted to the canonical agent only when ONE of these is true:
 4. The lesson closes a known architecture gap.
 5. The lesson adds a new supported dataset or analysis type.
 
-### C. Edit only the canonical layer
+### D. Edit only the canonical layer
 
 The trainer may edit:
 
 - `agent-core/**`
-- `agent-improvement/**`
+- `agent-improvement/**` (inbox, triage, promotions, reports)
 - `scripts/**`
 - `platform/**`
-- project-local memory under `projects/<id>/context/**`
+- project-local memory under `projects/<id>/context/**` (for record-keeping only)
 
 The trainer **must never** hand-edit generated wrappers under `.github/`,
 `.claude/`, `.agents/`, or `.codex/`.
 
-### D. Run the required post-change pipeline
+### E. Run the required post-change pipeline
 
 After any canonical change:
 
@@ -78,7 +106,7 @@ After any canonical change:
 3. `python scripts/validate_platform_outputs.py`
 4. Relevant evals if behaviour changed
 
-### E. Produce a change record
+### F. Produce a change record
 
 Every promotion creates a YAML record under `agent-improvement/promotions/`
 following `agent-improvement/schemas/promotion.yaml`.
@@ -199,6 +227,13 @@ Never edit generated wrappers directly; always regenerate via
   are source-of-truth.
 - **Auto-promoting without user consent.** The trainer captures by default
   and promotes only when asked or when the promotion threshold is met.
+- **Accepting informal markdown in inbox.** Only `.yaml` files following the
+  schema belong in `agent-improvement/inbox/`. Informal session notes go to
+  `projects/<id>/context/session-notes/`. Send informal content back to project
+  context with guidance to create structured YAML for promotion.
+- **Bypassing the inbox.** Never promote lessons directly from project context
+  or directly edit canonical files without routing through inbox → trainer → promotion
+  record. The inbox is the single collection point and audit trail.
 
 ---
 
