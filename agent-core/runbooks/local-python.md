@@ -193,9 +193,51 @@ readable and are auto-deleted after **30 days**.
 https://rads-custom-data.s3.amazonaws.com/download/<random_string>/<filename>
 ```
 
-### From a Databricks notebook (preferred)
+### Preferred: direct S3-to-S3 copy (use once outputs are validated)
+
+The output file is already in S3 — do a server-side copy locally. This is
+faster than any cron-based approach and gives an immediate link.
+
+```python
+import boto3, secrets, os
+from datetime import datetime, timezone
+
+s3 = boto3.client('s3', region_name='us-east-1')
+
+# Source: the validated output already on S3
+source_bucket = 'rads-projects'
+source_key    = 'short_term/2026/2026_XXX_myproject/output/my_results.csv.gz'
+
+filename   = os.path.basename(source_key)
+rand_token = secrets.token_urlsafe(12)   # 12-byte = 16-char URL-safe string
+dest_key   = f'download/{rand_token}/{filename}'
+
+# Fetch size before copying
+head    = s3.head_object(Bucket=source_bucket, Key=source_key)
+size    = head['ContentLength']
+created = datetime.now(timezone.utc).isoformat()
+
+# Server-side copy — no local download needed
+s3.copy_object(
+    CopySource={'Bucket': source_bucket, 'Key': source_key},
+    Bucket='rads-custom-data',
+    Key=dest_key,
+)
+
+url = f'https://rads-custom-data.s3.amazonaws.com/{dest_key}'
+print(f'File: {filename}')
+print(f'Created: {created}')
+print(f'Size: {size} bytes')
+print(f'It can be downloaded from:')
+print(url)
+```
+
+Always print the output in exactly the format above.
+
+### Alternative: from a Databricks notebook (use when output not yet a single S3 file)
+
 Use the library functions — they write a JSON instruction picked up by a cron
-job that handles the copy and notifies the recipient:
+job that handles the copy:
 ```python
 import dataframe_functions
 
@@ -223,23 +265,4 @@ download link to the recipient.
 
 **Constraint:** `share_file_path` only accepts paths under `s3://rads-projects/`.
 
-### From a local script
-When files are already local (in `./output/`) or you need to create a link
-without a Databricks notebook, upload directly to the same bucket pattern:
-```python
-import boto3, os, secrets
-
-s3 = boto3.client('s3', region_name='us-east-1')
-
-local_file = './output/my_results.csv.gz'
-filename   = os.path.basename(local_file)
-rand_token = secrets.token_urlsafe(12)          # 12-byte = 16-char URL-safe string
-s3_key     = f'download/{rand_token}/{filename}'
-
-s3.upload_file(local_file, 'rads-custom-data', s3_key)
-
-url = f'https://rads-custom-data.s3.amazonaws.com/{s3_key}'
-print(f'Download link (valid 30 days):\n{url}')
-```
-
-> Always report the full URL to the user. Remind them the link expires in 30 days.
+> Always report the full sharing metadata block to the user. Remind them the link expires in 30 days.
