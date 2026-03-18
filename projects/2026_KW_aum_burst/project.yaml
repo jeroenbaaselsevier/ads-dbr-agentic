@@ -1,0 +1,23 @@
+id: 2026_KW_aum_burst
+display_name: "AUM burst topic cluster analysis"
+year: 2026
+iso3: KW
+short_name: aum_burst
+status: completed
+owner: analyst-agent
+created_at: 2026-01-01T00:00:00Z
+
+paths:
+  local_root: projects/2026_KW_aum_burst
+  s3_root: s3://els-rads-projects/short_term/2026/2026_KW_aum_burst
+  dbfs_root: /mnt/els/els-rads-projects/short_term/2026/2026_KW_aum_burst
+  databricks_workspace_root: /Workspace/rads/projects/2026_KW_aum_burst
+
+folders:
+  local_output: projects/2026_KW_aum_burst/output
+  local_tmp: projects/2026_KW_aum_burst/tmp
+  spark_cache: /mnt/els/els-rads-projects/short_term/2026/2026_KW_aum_burst/cache
+  s3_output: s3://els-rads-projects/short_term/2026/2026_KW_aum_burst/output
+  s3_cache: s3://els-rads-projects/short_term/2026/2026_KW_aum_burst/cache
+
+notes: "S3 bucket is els-rads-projects (not rads-projects). KW = client abbreviation."

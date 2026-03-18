@@ -1,0 +1,21 @@
+id: 2026_INTERNAL_journal_ranking
+display_name: "Journal author ranking analysis"
+year: 2026
+iso3: INTERNAL
+short_name: journal_ranking
+status: completed
+owner: analyst-agent
+created_at: 2026-01-01T00:00:00Z
+
+paths:
+  local_root: projects/2026_INTERNAL_journal_ranking
+  s3_root: s3://rads-projects/short_term/2026/2026_INTERNAL_journal_ranking
+  dbfs_root: /mnt/els/rads-projects/short_term/2026/2026_INTERNAL_journal_ranking
+  databricks_workspace_root: /Workspace/rads/projects/2026_INTERNAL_journal_ranking
+
+folders:
+  local_output: projects/2026_INTERNAL_journal_ranking/output
+  local_tmp: projects/2026_INTERNAL_journal_ranking/tmp
+  spark_cache: /mnt/els/rads-projects/short_term/2026/2026_INTERNAL_journal_ranking/cache
+  s3_output: s3://rads-projects/short_term/2026/2026_INTERNAL_journal_ranking/output
+  s3_cache: s3://rads-projects/short_term/2026/2026_INTERNAL_journal_ranking/cache

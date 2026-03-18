@@ -1,0 +1,21 @@
+id: 2026_CHN_china_oa
+display_name: "China universities Elsevier OA journal analysis"
+year: 2026
+iso3: CHN
+short_name: china_oa
+status: completed
+owner: analyst-agent
+created_at: 2026-01-01T00:00:00Z
+
+paths:
+  local_root: projects/2026_CHN_china_oa
+  s3_root: s3://rads-projects/short_term/2026/2026_CHN_china_oa
+  dbfs_root: /mnt/els/rads-projects/short_term/2026/2026_CHN_china_oa
+  databricks_workspace_root: /Workspace/rads/projects/2026_CHN_china_oa
+
+folders:
+  local_output: projects/2026_CHN_china_oa/output
+  local_tmp: projects/2026_CHN_china_oa/tmp
+  spark_cache: /mnt/els/rads-projects/short_term/2026/2026_CHN_china_oa/cache
+  s3_output: s3://rads-projects/short_term/2026/2026_CHN_china_oa/output
+  s3_cache: s3://rads-projects/short_term/2026/2026_CHN_china_oa/cache

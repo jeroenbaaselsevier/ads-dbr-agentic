@@ -1,0 +1,21 @@
+id: 2026_INTERNAL_retraction
+display_name: "Retraction citation cascade analysis"
+year: 2026
+iso3: INTERNAL
+short_name: retraction
+status: active
+owner: analyst-agent
+created_at: 2026-01-01T00:00:00Z
+
+paths:
+  local_root: projects/2026_INTERNAL_retraction
+  s3_root: s3://rads-projects/short_term/2026/2026_INTERNAL_retraction
+  dbfs_root: /mnt/els/rads-projects/short_term/2026/2026_INTERNAL_retraction
+  databricks_workspace_root: /Workspace/rads/projects/2026_INTERNAL_retraction
+
+folders:
+  local_output: projects/2026_INTERNAL_retraction/output
+  local_tmp: projects/2026_INTERNAL_retraction/tmp
+  spark_cache: /mnt/els/rads-projects/short_term/2026/2026_INTERNAL_retraction/cache
+  s3_output: s3://rads-projects/short_term/2026/2026_INTERNAL_retraction/output
+  s3_cache: s3://rads-projects/short_term/2026/2026_INTERNAL_retraction/cache

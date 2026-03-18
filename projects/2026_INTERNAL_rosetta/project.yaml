@@ -1,0 +1,21 @@
+id: 2026_INTERNAL_rosetta
+display_name: "Rosetta journal metadata exploration"
+year: 2026
+iso3: INTERNAL
+short_name: rosetta
+status: completed
+owner: analyst-agent
+created_at: 2026-01-01T00:00:00Z
+
+paths:
+  local_root: projects/2026_INTERNAL_rosetta
+  s3_root: s3://rads-projects/short_term/2026/2026_INTERNAL_rosetta
+  dbfs_root: /mnt/els/rads-projects/short_term/2026/2026_INTERNAL_rosetta
+  databricks_workspace_root: /Workspace/rads/projects/2026_INTERNAL_rosetta
+
+folders:
+  local_output: projects/2026_INTERNAL_rosetta/output
+  local_tmp: projects/2026_INTERNAL_rosetta/tmp
+  spark_cache: /mnt/els/rads-projects/short_term/2026/2026_INTERNAL_rosetta/cache
+  s3_output: s3://rads-projects/short_term/2026/2026_INTERNAL_rosetta/output
+  s3_cache: s3://rads-projects/short_term/2026/2026_INTERNAL_rosetta/cache

@@ -157,6 +157,9 @@ df_author_pool = (
     )
 )
 
+# Reusable keyset: authors in the 5+ paper pool
+df_pool_auids = df_author_pool.select('auid').distinct()
+
 # COMMAND ----------
 # MAGIC %md ## 3. Build core intermediate: (eid, auid, countries_array)
 # MAGIC
@@ -223,28 +226,44 @@ print('Multi-country author-paper pairs:',
 
 # COMMAND ----------
 
-# Flag papers where ≥1 author has 2+ countries
-df_paper_multi_flag = (
+# Flag papers where ≥1 author has 2+ countries (all authors)
+df_paper_multi_flag_any = (
     df_author_countries
     .filter('country_count >= 2')
     .groupBy('eid')
     .agg(
-        F.count('*').alias('n_multi_country_authors'),
-        F.collect_set('auid').alias('multi_country_auids'),
+        F.count('*').alias('n_multi_country_authors_any'),
     )
     .withColumn('has_multi_country_author', F.lit(True))
+)
+
+# Sensitivity flag: papers where ≥1 MCA author is in the 5+ pool
+df_paper_multi_flag_pool = (
+    df_author_countries
+    .filter('country_count >= 2')
+    .join(df_pool_auids, 'auid', 'inner')
+    .groupBy('eid')
+    .agg(
+        F.count('*').alias('n_multi_country_authors_pool'),
+    )
+    .withColumn('has_multi_country_author_pool', F.lit(True))
 )
 
 # Join multi-country flag to nopp + 1996+ ANI universe
 df_paper_analysis = dataframe_functions.df_cached(
     df_ani_years
-    .join(df_paper_multi_flag, 'eid', 'left')
+    .join(df_paper_multi_flag_any, 'eid', 'left')
+    .join(df_paper_multi_flag_pool, 'eid', 'left')
     .withColumn(
         'has_multi_country_author',
         F.coalesce(F.col('has_multi_country_author'), F.lit(False))
     )
+    .withColumn(
+        'has_multi_country_author_pool',
+        F.coalesce(F.col('has_multi_country_author_pool'), F.lit(False))
+    )
     .join(df_smc, 'eid', 'left'),
-    str_path=os.path.join(cache_folder, f'paper_analysis_{ani_stamp}'),
+    str_path=os.path.join(cache_folder, f'paper_analysis_{ani_stamp}_v2_pool_sensitivity'),
     partitions=100,
 )
 
@@ -259,12 +278,19 @@ df_paper_year = dataframe_functions.df_cached(
     .agg(
         F.count('*').alias('total_papers'),
         F.sum(F.col('has_multi_country_author').cast(LongType())).alias('papers_with_mca'),
+        F.sum(F.col('has_multi_country_author_pool').cast(LongType())).alias('papers_with_mca_pool'),
     )
     .withColumn('pct_papers_mca', F.round(
         100.0 * F.col('papers_with_mca') / F.col('total_papers'), 4
     ))
+    .withColumn('pct_papers_mca_pool', F.round(
+        100.0 * F.col('papers_with_mca_pool') / F.col('total_papers'), 4
+    ))
+    .withColumn('delta_pct_pool_vs_any', F.round(
+        F.col('pct_papers_mca_pool') - F.col('pct_papers_mca'), 4
+    ))
     .orderBy('sort_year'),
-    str_path=os.path.join(cache_folder, f'paper_year_{ani_stamp}'),
+    str_path=os.path.join(cache_folder, f'paper_year_{ani_stamp}_v2_pool_sensitivity'),
     partitions=1,
 )
 
@@ -281,12 +307,19 @@ df_paper_subfield = dataframe_functions.df_cached(
     .agg(
         F.count('*').alias('total_papers'),
         F.sum(F.col('has_multi_country_author').cast(LongType())).alias('papers_with_mca'),
+        F.sum(F.col('has_multi_country_author_pool').cast(LongType())).alias('papers_with_mca_pool'),
     )
     .withColumn('pct_papers_mca', F.round(
         100.0 * F.col('papers_with_mca') / F.col('total_papers'), 4
     ))
+    .withColumn('pct_papers_mca_pool', F.round(
+        100.0 * F.col('papers_with_mca_pool') / F.col('total_papers'), 4
+    ))
+    .withColumn('delta_pct_pool_vs_any', F.round(
+        F.col('pct_papers_mca_pool') - F.col('pct_papers_mca'), 4
+    ))
     .orderBy(F.col('pct_papers_mca').desc()),
-    str_path=os.path.join(cache_folder, f'paper_subfield_{ani_stamp}'),
+    str_path=os.path.join(cache_folder, f'paper_subfield_{ani_stamp}_v2_pool_sensitivity'),
     partitions=1,
 )
 
@@ -304,12 +337,19 @@ df_paper_year_field = dataframe_functions.df_cached(
     .agg(
         F.count('*').alias('total_papers'),
         F.sum(F.col('has_multi_country_author').cast(LongType())).alias('papers_with_mca'),
+        F.sum(F.col('has_multi_country_author_pool').cast(LongType())).alias('papers_with_mca_pool'),
     )
     .withColumn('pct_papers_mca', F.round(
         100.0 * F.col('papers_with_mca') / F.col('total_papers'), 4
     ))
+    .withColumn('pct_papers_mca_pool', F.round(
+        100.0 * F.col('papers_with_mca_pool') / F.col('total_papers'), 4
+    ))
+    .withColumn('delta_pct_pool_vs_any', F.round(
+        F.col('pct_papers_mca_pool') - F.col('pct_papers_mca'), 4
+    ))
     .orderBy('sort_year', 'Field'),
-    str_path=os.path.join(cache_folder, f'paper_year_field_{ani_stamp}'),
+    str_path=os.path.join(cache_folder, f'paper_year_field_{ani_stamp}_v2_pool_sensitivity'),
     partitions=5,
 )
 
@@ -325,12 +365,19 @@ df_paper_year_subfield = dataframe_functions.df_cached(
     .agg(
         F.count('*').alias('total_papers'),
         F.sum(F.col('has_multi_country_author').cast(LongType())).alias('papers_with_mca'),
+        F.sum(F.col('has_multi_country_author_pool').cast(LongType())).alias('papers_with_mca_pool'),
     )
     .withColumn('pct_papers_mca', F.round(
         100.0 * F.col('papers_with_mca') / F.col('total_papers'), 4
     ))
+    .withColumn('pct_papers_mca_pool', F.round(
+        100.0 * F.col('papers_with_mca_pool') / F.col('total_papers'), 4
+    ))
+    .withColumn('delta_pct_pool_vs_any', F.round(
+        F.col('pct_papers_mca_pool') - F.col('pct_papers_mca'), 4
+    ))
     .orderBy('sort_year', 'Subfield'),
-    str_path=os.path.join(cache_folder, f'paper_year_subfield_{ani_stamp}'),
+    str_path=os.path.join(cache_folder, f'paper_year_subfield_{ani_stamp}_v2_pool_sensitivity'),
     partitions=10,
 )
 
@@ -395,9 +442,6 @@ display(df_author_subfield)
 # MAGIC Per year: how many pool authors had at least one MCA paper published in that year?
 
 # COMMAND ----------
-
-# Denominator: distinct pool authors who appear in any paper that year
-df_pool_auids = df_author_pool.select('auid')
 
 df_denom_by_year = (
     df_author_countries
@@ -609,7 +653,46 @@ dataframe_functions.export_df_csv(
 )
 
 # COMMAND ----------
-# MAGIC %md ## 8. Export all summary tables as CSV
+# MAGIC %md ## 8. Country-level summary (for null model analysis)
+
+# COMMAND ----------
+
+# Per country: total authors appearing with that country + mca authors
+df_author_by_country = (
+    df_author_countries
+    .select('auid', F.explode('countries').alias('country'))
+    .groupBy('country')
+    .agg(
+        F.countDistinct('auid').alias('total_authors'),
+    )
+)
+
+df_mca_author_by_country = (
+    df_author_countries
+    .filter('country_count >= 2')
+    .select('auid', F.explode('countries').alias('country'))
+    .groupBy('country')
+    .agg(
+        F.countDistinct('auid').alias('authors_with_mca'),
+    )
+)
+
+df_country_summary = dataframe_functions.df_cached(
+    df_author_by_country
+    .join(df_mca_author_by_country, 'country', 'left')
+    .withColumn('authors_with_mca', 
+                F.coalesce('authors_with_mca', F.lit(0)))
+    .withColumn('pct_authors_mca',
+                F.round(100.0 * F.col('authors_with_mca') / F.col('total_authors'), 4))
+    .orderBy(F.col('authors_with_mca').desc()),
+    str_path=os.path.join(cache_folder, f'country_summary_{collab_stamp}'),
+    partitions=1,
+)
+
+display(df_country_summary.limit(30))
+
+# COMMAND ----------
+# MAGIC %md ## 9. Export all summary tables as CSV
 
 # COMMAND ----------
 
@@ -622,8 +705,10 @@ for _df, _name in [
     (df_author_subfield,         'author_breakdown_by_subfield'),
     (df_author_year_subfield,    'author_trend_by_year_and_subfield'),
     (df_author_first_mca,        'author_first_mca_cohort_by_year_field'),
+    (df_country_summary,         'country_summary'),
     (df_country_pairs_overall,   'country_pairs_overall'),
     (df_country_pairs_field,     'country_pairs_by_field'),
+    (df_country_pairs_year,      'country_pairs_by_year'),
 ]:
     dataframe_functions.export_df_csv(
         _df, name=_name,
@@ -640,9 +725,12 @@ for _df, _name in [
 
 total_papers = df_paper_year.agg(F.sum('total_papers')).collect()[0][0]
 mca_papers   = df_paper_year.agg(F.sum('papers_with_mca')).collect()[0][0]
+mca_papers_pool = df_paper_year.agg(F.sum('papers_with_mca_pool')).collect()[0][0]
 print(f'Papers (nopp, 1996–, all years)')
 print(f'  Total             : {total_papers:,}')
 print(f'  With MCA author   : {mca_papers:,}  ({100*mca_papers/total_papers:.2f}%)')
+print(f'  With MCA author (pool-only sensitivity) : {mca_papers_pool:,}  ({100*mca_papers_pool/total_papers:.2f}%)')
+print(f'  Gap vs all-authors indicator            : {mca_papers_pool - mca_papers:,} papers  ({100*(mca_papers_pool - mca_papers)/total_papers:.2f} pp)')
 print()
 n_pool_total = df_author_summary.count()
 n_pool_mca   = df_author_summary.filter('has_mca_paper').count()
