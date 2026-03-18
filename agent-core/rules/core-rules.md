@@ -21,16 +21,17 @@ These rules are non-negotiable. Read this file at the start of every conversatio
 
 5. **Do not overwrite** existing notebooks without asking the user first.
 
-6. **Store all code in `notebooks/`** — every file written for a project (both
-   the Databricks `.py` notebook and any local post-processing scripts) lives
-   under `notebooks/<project_shortname>/` in the git repo. This makes the
-   analysis fully reproducible. Use sub-folders per project:
+6. **Store all code under `projects/`** — for any new analysis, create a
+   project container under `projects/<project_id>/`. Use
+   `python scripts/init_project.py` to scaffold the folder structure and
+   generate `project.yaml`. Code goes in project sub-folders:
    ```
-   notebooks/<shortname>/<shortname>_spark.py       # Databricks notebook
-   notebooks/<shortname>/<shortname>_postprocess.py  # local charts / exports
+   projects/<project_id>/notebooks/spark/<shortname>.py        # Databricks notebook
+   projects/<project_id>/notebooks/exploratory/<name>.py       # ad-hoc exploration
+   projects/<project_id>/scripts/local/postprocess.py          # local charts / exports
    ```
-   Flat placement directly under `notebooks/` is acceptable for single-file
-   analyses, but a sub-folder is preferred whenever there is more than one file.
+   Legacy code under `notebooks/` is still supported for backward
+   compatibility, but all **new** work should use `projects/`.
 
 7. **Never embed credentials.** The Databricks CLI uses the pre-configured
    profile. Never store or request AWS keys.
@@ -137,12 +138,16 @@ These rules are non-negotiable. Read this file at the start of every conversatio
     JOIN, or window operations on parquet read from S3. Use pandas only for
     final formatting and chart data prep.
 
-15. **Local output paths** — use two distinct local folders:
-    - `./tmp/` — throwaway artifacts: downloaded HTML, raw parquet copies,
-      intermediate files, decode scripts. Never share these with the user.
-    - `./output/` — deliverables: charts (PNG/HTML), tables (CSV/Excel), and
-      any file the user needs to review or share. Always report `./output/`
-      paths to the user when a file is saved there.
+15. **Local output paths** — use project-scoped folders when a project
+    container exists, or global folders for quick one-off work:
+    - **Project-scoped (preferred for new work):**
+      - `projects/<project_id>/tmp/` — throwaway artifacts
+      - `projects/<project_id>/output/` — deliverables
+    - **Global (legacy / one-off):**
+      - `./tmp/` — throwaway artifacts
+      - `./output/` — deliverables
+    Never share tmp files with the user. Always report output paths when a
+    file is saved.
 
 16. **Snapshot convention** — always use 1st-of-month ANI stamps (`20260301`,
     not `20260312`). Daily snapshots are deleted after ~2 weeks; monthly
@@ -166,3 +171,26 @@ These rules are non-negotiable. Read this file at the start of every conversatio
       `runbooks/local-python-runbook.md`.
     This keeps the documented environment in sync so every future session
     knows the capability is available.
+
+19. **Project resources** — for any task that will create code, outputs,
+    dashboards, or S3 assets, establish a project container first. Propose a
+    project ID (`YYYY_ISO3_shortname`) and confirm with the user in one round.
+    Use `python scripts/init_project.py` to scaffold. Write
+    `.agent-state/active_project.json` so scripts and hooks know the current
+    project. See `agent-core/roles/project-resources.md` for the full workflow.
+
+20. **Session closeout** — at the end of every project session, run explicit
+    closeout: `python scripts/closeout_project.py --project-id ... --session-id
+    ... --status ...`. This produces a session summary, lessons stub,
+    deliverables manifest, and improvement intake record. Do not skip closeout
+    even for partial sessions.
+
+21. **Self-improvement discipline** — the agent may capture lessons during
+    sessions but must **never** directly edit `core-rules.md`, `AGENTS.md`,
+    `copilot-instructions.md`, or any always-on prompt file. Lessons flow
+    through a promotion pipeline:
+    `session note → project/context/lessons/ → agent-improvement/inbox/ →
+    triage → GitHub Issue/Discussion → PR → eval → merge`.
+    Only reviewed and accepted lessons become durable team knowledge in
+    `agent-core/`. See `agent-improvement/schemas/lesson.yaml` for the
+    structured lesson format.

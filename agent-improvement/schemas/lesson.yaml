@@ -1,0 +1,81 @@
+# Lesson Schema — agent-improvement
+# This defines the structured format for captured session lessons.
+# Lessons flow: session → inbox → triage → promote/reject.
+
+required_fields:
+  - id            # LES-YYYY-MM-DD-NNN
+  - project_id    # e.g. 2026_NLD_journal_trend
+  - scope         # project | client | user | global
+  - memory_type   # semantic | procedural | episodic
+  - category      # see enum below
+  - summary       # one-paragraph description
+  - confidence    # low | medium | high
+  - status        # captured | triaged | promoted | rejected
+
+recommended_fields:
+  - captured_at       # ISO 8601 UTC timestamp
+  - impact            # low | medium | high
+  - recurrence_hint   # first_time | repeated | systematic
+  - observed_in       # list of file paths where the lesson was observed
+  - suggested_action  # where to promote, what to change
+  - notes             # free-text elaboration
+
+enums:
+  scope:
+    - project   # only relevant to this one analysis
+    - client    # relevant for this client / country account
+    - user      # preference of one user / analyst
+    - global    # should influence the core agent for everyone
+
+  memory_type:
+    - semantic    # facts about data, schemas, coverage, joins, caveats
+    - procedural  # how the agent should work, name files, structure outputs
+    - episodic    # what happened in this project and what was decided
+
+  category:
+    - schema      # column names, types, coverage, join keys
+    - query       # query patterns, filters, performance
+    - workflow    # process steps, deployment, monitoring
+    - output_style  # formatting, charts, deliverable conventions
+    - tooling     # scripts, CLI, environment, packages
+    - bug         # errors encountered and fixed
+    - dashboard   # visualization, HTML, interactive output
+    - naming      # file naming, path conventions, project IDs
+    - sharing     # output sharing, download links, S3 copy
+    - profile     # client or user preference
+
+  status:
+    - captured   # raw capture from session closeout
+    - triaged    # reviewed, deduplicated, classified
+    - promoted   # accepted into agent-core or profiles
+    - rejected   # noise, duplicate, or not actionable
+
+  suggested_action_fields:
+    target: "path to the file to update (e.g. agent-core/references/source.md)"
+    change_type: "doc_update | new_rule | recipe_update | profile_update | eval_addition"
+    proposed_eval: "name of eval to add when promoting"
+
+# Example lesson record
+example: |
+  id: LES-2026-03-18-001
+  captured_at: 2026-03-18T16:20:00Z
+  project_id: 2026_NLD_journal_trend
+  scope: global
+  memory_type: semantic
+  category: schema
+  summary: >
+    Source profile joins are too sparse for headline metrics;
+    always treat them as enrichment only.
+  impact: medium
+  confidence: high
+  recurrence_hint: repeated
+  observed_in:
+    - projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py
+  suggested_action:
+    target: agent-core/references/source.md
+    change_type: doc_update
+    proposed_eval: source-profile-coverage-caveat
+  status: captured
+  notes: >
+    The user expected complete source enrichment; the session
+    clarified that match rates are partial.

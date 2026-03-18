@@ -422,3 +422,94 @@ recipes:
       - knowledge transfer
       - technology transfer
       - paper cited by patent
+
+roles:
+
+  - name: project-resources
+    reference: agent-core/roles/project-resources.md
+    keywords:
+      - project
+      - project scaffold
+      - init project
+      - bootstrap
+      - project.yaml
+      - project manifest
+      - closeout
+      - session closeout
+      - deliverables
+      - session summary
+      - session notes
+      - active project
+
+  - name: analyst-orchestrator
+    reference: agent-core/roles/analyst-orchestrator.md
+    keywords:
+      - orchestrator
+      - plan
+      - decompose
+      - subagent
+
+  - name: reviewer
+    reference: agent-core/roles/reviewer.md
+    keywords:
+      - review
+      - quality check
+      - validate
+      - nopp check
+      - join direction
+
+  - name: notebook-implementer
+    reference: agent-core/roles/notebook-implementer.md
+    keywords:
+      - notebook
+      - implement
+      - spark notebook
+      - write notebook
+
+  - name: results-packager
+    reference: agent-core/roles/results-packager.md
+    keywords:
+      - package
+      - export
+      - deliverable
+      - chart
+      - dashboard
+
+improvement:
+
+  - name: lesson-schema
+    reference: agent-improvement/schemas/lesson.yaml
+    keywords:
+      - lesson
+      - self-improvement
+      - improvement
+      - lesson capture
+      - scope
+      - memory type
+      - triage
+      - promote
+      - inbox
+
+  - name: project-schema
+    reference: agent-improvement/schemas/project.yaml
+    keywords:
+      - project manifest
+      - project schema
+      - project.yaml schema
+
+profiles:
+
+  - name: client-profiles
+    reference: agent-core/profiles/clients/
+    keywords:
+      - client
+      - client profile
+      - client preference
+      - country program
+
+  - name: user-profiles
+    reference: agent-core/profiles/users/
+    keywords:
+      - user
+      - user preference
+      - analyst preference

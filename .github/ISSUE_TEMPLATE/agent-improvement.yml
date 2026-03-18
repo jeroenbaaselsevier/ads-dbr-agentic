@@ -1,0 +1,100 @@
+name: Agent Improvement
+description: Request an improvement to the analyst agent's rules, references, recipes, profiles, or tooling.
+title: "[agent-improvement] "
+labels: ["agent-improvement"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - schema
+        - query
+        - workflow
+        - output_style
+        - tooling
+        - bug
+        - dashboard
+        - naming
+        - sharing
+        - profile
+        - recipe
+        - eval
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Who does this affect?
+      options:
+        - global
+        - client
+        - user
+        - project
+    validations:
+      required: true
+
+  - type: dropdown
+    id: memory_type
+    attributes:
+      label: Memory type
+      options:
+        - semantic
+        - procedural
+        - episodic
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What should the agent learn or change?
+      placeholder: Describe the improvement in one paragraph.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Where was this observed? Link to projects, sessions, or files.
+      placeholder: |
+        - Project: 2026_NLD_journal_trend
+        - File: projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py
+        - Session: 20260318T1620
+
+  - type: input
+    id: target_file
+    attributes:
+      label: Proposed target file
+      description: Which agent-core file should be updated?
+      placeholder: "agent-core/references/source.md"
+
+  - type: input
+    id: proposed_eval
+    attributes:
+      label: Proposed eval
+      description: Name of eval to add when promoting this improvement.
+      placeholder: "source-profile-coverage-caveat"
+
+  - type: dropdown
+    id: recurrence
+    attributes:
+      label: Recurrence
+      options:
+        - first_time
+        - repeated
+        - systematic
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk if ignored
+      description: What happens if this is not addressed?
+      options:
+        - low
+        - medium
+        - high

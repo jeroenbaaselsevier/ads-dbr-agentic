@@ -20,10 +20,17 @@ __pycache__/
 tmp/
 output/
 
-# NOTE: agent-core/, .claude/, .agents/, .codex/, scripts/, platform/, tools/
-# are all intentionally tracked. Generated platform adapter files
+# Project-level generated artifacts (code + context are committed)
+projects/*/output/
+projects/*/tmp/
+projects/*/cache-meta/
+
+# Agent state (ephemeral working-tree state)
+.agent-state/
+
+# NOTE: agent-core/, .claude/, .agents/, .codex/, scripts/, platform/, tools/,
+# agent-improvement/, and projects/ (code + context subdirs) are all
+# intentionally tracked. Generated platform adapter files
 # (.github/copilot-instructions.md, .github/agents/analyst.agent.md,
 # CLAUDE.md, AGENTS.md, .claude/, .agents/, .codex/) are committed so they
 # remain readable without running the build script.
-
-tmp/

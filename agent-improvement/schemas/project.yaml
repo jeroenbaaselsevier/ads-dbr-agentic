@@ -1,0 +1,83 @@
+# Project Manifest Schema — project.yaml
+# Every project has one project.yaml at its root that defines all canonical paths.
+
+required_fields:
+  - id              # YYYY_ISO3_shortname (e.g. 2026_NLD_journal_trend)
+  - display_name    # human-readable project title
+  - year            # YYYY
+  - iso3            # ISO 3166-1 alpha-3 or INTERNAL
+  - short_name      # snake_case slug
+  - status          # active | completed | archived
+  - created_at      # ISO 8601 UTC timestamp
+
+recommended_fields:
+  - owner           # who created or is responsible
+  - ani_stamp       # ANI snapshot stamp (e.g. 20260301)
+
+derived_paths:
+  local_root: "projects/<id>"
+  s3_root: "s3://rads-projects/short_term/<year>/<id>"
+  dbfs_root: "/mnt/els/rads-projects/short_term/<year>/<id>"
+  databricks_workspace_root: "/Workspace/rads/projects/<id>"
+
+derived_folders:
+  local_output: "projects/<id>/output"
+  local_tmp: "projects/<id>/tmp"
+  spark_cache: "/mnt/els/rads-projects/short_term/<year>/<id>/cache"
+  s3_output: "s3://rads-projects/short_term/<year>/<id>/output"
+  s3_cache: "s3://rads-projects/short_term/<year>/<id>/cache"
+
+enums:
+  status:
+    - active     # currently being worked on
+    - completed  # analysis finished, deliverables produced
+    - archived   # no longer active, kept for reference
+
+# Folder structure created by init_project.py
+scaffold:
+  - project.yaml
+  - README.md
+  - notebooks/
+  - notebooks/spark/
+  - notebooks/exploratory/
+  - scripts/
+  - scripts/local/
+  - context/
+  - context/brief.md
+  - context/decisions.md
+  - context/open-questions.md
+  - context/summary.md
+  - context/deliverables.yaml
+  - context/session-notes/
+  - context/lessons/
+  - output/           # gitignored
+  - tmp/              # gitignored
+
+# Example project.yaml
+example: |
+  id: 2026_NLD_journal_trend
+  display_name: "Journal trend analysis for client X"
+  year: 2026
+  iso3: NLD
+  short_name: journal_trend
+  status: active
+  owner: analyst-agent
+  created_at: 2026-03-18T15:45:00Z
+  ani_stamp: "20260301"
+
+  paths:
+    local_root: projects/2026_NLD_journal_trend
+    s3_root: s3://rads-projects/short_term/2026/2026_NLD_journal_trend
+    dbfs_root: /mnt/els/rads-projects/short_term/2026/2026_NLD_journal_trend
+    databricks_workspace_root: /Workspace/rads/projects/2026_NLD_journal_trend
+
+  folders:
+    local_output: projects/2026_NLD_journal_trend/output
+    local_tmp: projects/2026_NLD_journal_trend/tmp
+    spark_cache: /mnt/els/rads-projects/short_term/2026/2026_NLD_journal_trend/cache
+    s3_output: s3://rads-projects/short_term/2026/2026_NLD_journal_trend/output
+    s3_cache: s3://rads-projects/short_term/2026/2026_NLD_journal_trend/cache
+
+  defaults:
+    spark_notebook: projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py
+    local_postprocess: projects/2026_NLD_journal_trend/scripts/local/postprocess.py

@@ -105,13 +105,26 @@ first via `go-aws-sso` if needed.
 
 ## Local folder conventions
 
+When working inside a project container (preferred for new work):
+
 | Folder | Purpose |
 |---|---|
-| `./tmp/` | Throwaway artifacts: downloaded HTML, raw parquet copies, intermediate files, decode scripts. Not shared with the user. |
-| `./output/` | Deliverables: charts (PNG/HTML), tables (CSV/Excel), any file the user needs. Always report paths here to the user. |
+| `projects/<project_id>/tmp/` | Throwaway artifacts. Not shared with the user. |
+| `projects/<project_id>/output/` | Deliverables: charts, tables, any file the user needs. Always report paths. |
 
-Both folders are git-ignored. Create them as needed:
+Global folders remain available for quick one-off work:
+
+| Folder | Purpose |
+|---|---|
+| `./tmp/` | Throwaway artifacts (legacy / one-off). |
+| `./output/` | Deliverables (legacy / one-off). |
+
+All output/tmp folders are git-ignored. Create them as needed:
 ```bash
+# Project-scoped
+mkdir -p projects/<project_id>/tmp projects/<project_id>/output
+
+# Global
 mkdir -p ./tmp ./output
 ```
 

@@ -21,7 +21,7 @@ Databricks CLI.
 | Default Spark library path | `{{ spark_library_path }}` |
 | Local library mirror | `./rads_library/` (run `./sync_library.sh` to refresh) |
 | ADS metrics pipeline code | `./rads_metrics_code/` (run `./sync_metrics_code.sh` to refresh) |
-| Temp file scratch space | `./tmp/` — use this for all temp files to avoid OS-level permission prompts |
+| Temp file scratch space | `./tmp/` or `projects/<id>/tmp/` — use for all temp files |
 
 ---
 
@@ -40,9 +40,15 @@ backward compatibility). The entry points are:
 | `agent-core/runbooks/` | Step-by-step procedures: `databricks.md`, `local-python.md`, `aws-and-s3.md` |
 | `agent-core/recipes/` | Copy-paste notebook templates for common analysis patterns |
 | `agent-core/roles/` | Portable subagent role definitions |
+| `agent-core/profiles/` | Client and user preference profiles |
 | `tools/qa/validate_notebook.py` | Static notebook quality checker |
 | `scripts/validate_agent_core.py` | Validate all catalog references are intact |
+| `scripts/init_project.py` | Bootstrap a new project scaffold |
+| `scripts/closeout_project.py` | Finalize a project session |
 
 For analytics tasks, invoke the **analyst** agent (`.github/agents/analyst.agent.md`).
 The analyst reads `core-rules.md` and `knowledge-index.yaml` at the start of
 every conversation, then consults the relevant reference files and recipes as needed.
+
+For project lifecycle, invoke the **project-resources** agent
+(`.github/agents/project-resources.agent.md`).

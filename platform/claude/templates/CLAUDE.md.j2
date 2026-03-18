@@ -14,13 +14,16 @@ data, deployed to Databricks.
 
 Read these two files **at the start of every conversation**:
 
-1. `agent-core/rules/core-rules.md` — 18 non-negotiable operational rules
+1. `agent-core/rules/core-rules.md` — 21 non-negotiable operational rules
 2. `agent-core/catalog/knowledge-index.yaml` — topic → reference routing
 
 ## Agent skills
 
 For analytics tasks, use the `ads-analyst` skill:
 `.claude/skills/ads-analyst/SKILL.md`
+
+For project bootstrap, path derivation, and session closeout:
+`.claude/skills/project-resources/SKILL.md`
 
 ## Subagent roles
 
@@ -38,11 +41,13 @@ For analytics tasks, use the `ads-analyst` skill:
 | Default cluster | `{{ cluster_id }}` |
 | Spark library path | `{{ spark_library_path }}` |
 | Local venv | `.venv` |
-| Temp scratch | `./tmp/` |
-| Deliverables | `./output/` |
+| Temp scratch | `./tmp/` or `projects/<id>/tmp/` |
+| Deliverables | `./output/` or `projects/<id>/output/` |
 
 ## Key paths
 
 - Canonical knowledge: `agent-core/`
-- Notebooks: `notebooks/<shortname>/`
+- Projects (new work): `projects/<project_id>/`
+- Notebooks (legacy): `notebooks/<shortname>/`
+- Self-improvement inbox: `agent-improvement/inbox/`
 - Platform adapters: `.claude/`, `.github/agents/`, `AGENTS.md`

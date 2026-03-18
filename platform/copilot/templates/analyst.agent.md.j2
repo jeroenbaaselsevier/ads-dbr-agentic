@@ -72,7 +72,8 @@ file, then read it. Check `agent-core/recipes/` for common patterns.
 For library function signatures, read `agent-core/references/library.md`.
 
 ### 4. Generate the notebook
-Store **all code** under `notebooks/` (see `agent-core/rules/output-contract.md`).
+Store **all code** under `projects/<project_id>/` for new work (see rule 6 in
+`core-rules.md`), or `notebooks/` for legacy single-file analyses.
 
 Mandatory boilerplate:
 ```python
@@ -95,7 +96,7 @@ cache_folder     = os.path.join(str_path_project, 'cache')
 
 ### 5. Deploy and run
 ```bash
-./deploy.sh notebooks/<name>.py --run
+./deploy.sh projects/<project_id>/notebooks/spark/<name>.py --run
 ```
 Capture the `run_id`. See `agent-core/runbooks/databricks.md` for full procedure.
 
@@ -112,3 +113,6 @@ See `agent-core/runbooks/local-python.md` and `agent-core/roles/results-packager
 
 ### 9. Reviewer checklist
 Run through `agent-core/roles/reviewer.md` before presenting to the user.
+
+### 10. Session closeout
+Run `python scripts/closeout_project.py` to finalize the session. See rule 20.

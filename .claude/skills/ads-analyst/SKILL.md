@@ -41,8 +41,23 @@ All schema and pattern knowledge:
 - `agent-core/references/` — per-table schemas
 - `agent-core/recipes/` — copy-paste notebook templates
 - `agent-core/runbooks/` — execution procedures
-- `agent-core/roles/` — role definitions
+- `agent-core/roles/` — role definitions (including `project-resources.md`)
 - `agent-core/tool-contract/` — tool specs
+- `agent-core/profiles/` — client and user preferences
+
+## Project resources
+
+For any task creating code, outputs, or S3 assets:
+- Bootstrap with `python scripts/init_project.py`
+- New work goes in `projects/<project_id>/` (not `notebooks/`)
+- Run closeout at session end: `python scripts/closeout_project.py`
+- See `agent-core/roles/project-resources.md` for the full workflow
+
+## Self-improvement discipline
+
+- Never directly edit `core-rules.md` or any always-on prompt file
+- Capture lessons via `scripts/capture_lessons.py`
+- Improvement pipeline: session → inbox → triage → PR → merge
 
 ## Join caveats quick-reference
 

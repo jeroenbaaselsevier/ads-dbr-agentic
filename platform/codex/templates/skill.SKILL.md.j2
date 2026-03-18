@@ -41,6 +41,9 @@ applyTo: "**"
 - Cast `afid` long → string for OrgDB
 - `long_eid_to_eidstr()` for SciVal joins
 - First-of-month stamps only
-- Code in `notebooks/<shortname>/`
+- New work in `projects/<project_id>/` (use `scripts/init_project.py`)
+- Legacy code in `notebooks/<shortname>/` still supported
 - Parquet for Spark → local handover
-- Deliverables in `./output/`, temps in `./tmp/`
+- Deliverables in `projects/<project_id>/output/`, temps in `projects/<project_id>/tmp/`
+- Run session closeout: `scripts/closeout_project.py`
+- Never directly edit core-rules.md — use the lesson promotion pipeline

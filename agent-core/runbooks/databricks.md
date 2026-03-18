@@ -18,23 +18,26 @@ All notebooks are plain `.py` files using Databricks cell separators:
 
 ### Upload only
 ```bash
+# Project-scoped (preferred for new work)
+./deploy.sh projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py
+
+# Legacy path (still supported)
 ./deploy.sh notebooks/my_analysis.py
-# deploys to /Workspace/Users/J.Baas@elsevier.com/my_analysis
 ```
 
 ### Upload and run on default cluster
 ```bash
-./deploy.sh notebooks/my_analysis.py --run
+./deploy.sh projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py --run
 ```
 
 ### Upload and run on a specific cluster
 ```bash
-./deploy.sh notebooks/my_analysis.py --run --cluster-id 0303-153342-zrgyfy1c
+./deploy.sh projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py --run --cluster-id 0303-153342-zrgyfy1c
 ```
 
 ### Upload to a custom remote path
 ```bash
-./deploy.sh notebooks/my_analysis.py /Workspace/Users/J.Baas@elsevier.com/subfolder/my_analysis --run
+./deploy.sh projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py /Workspace/rads/projects/2026_NLD_journal_trend/journal_trend --run
 ```
 
 ## Clusters
@@ -81,7 +84,7 @@ Exit codes: `0` = SUCCESS, `1` = FAILED/CANCELED, `2` = INTERNAL_ERROR/SKIPPED,
 
 Typical deploy-and-wait one-liner:
 ```bash
-RUN_ID=$(./deploy.sh notebooks/my_analysis.py --run | python3 -c "
+RUN_ID=$(./deploy.sh projects/2026_NLD_journal_trend/notebooks/spark/journal_trend.py --run | python3 -c "
 import json,sys; print(json.load(sys.stdin)['run_id'])
 ") && ./poll_run.sh "$RUN_ID"
 ```

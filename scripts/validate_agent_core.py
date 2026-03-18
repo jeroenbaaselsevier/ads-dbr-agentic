@@ -35,6 +35,7 @@ REQUIRED_ROLES = [
     "notebook-implementer.md",
     "results-packager.md",
     "reviewer.md",
+    "project-resources.md",
 ]
 
 REQUIRED_TOOL_CONTRACTS = [
@@ -125,6 +126,33 @@ def validate(verbose: bool = True) -> list:
     for runbook in REQUIRED_RUNBOOKS:
         check_file_exists(
             AGENT_CORE / "runbooks" / runbook, f"runbook {runbook}", errors
+        )
+
+    # 8. Check profiles directories exist
+    for profile_dir in ["clients", "users"]:
+        d = AGENT_CORE / "profiles" / profile_dir
+        if not d.exists():
+            errors.append(f"MISSING profiles directory: {d.relative_to(REPO_ROOT)}")
+
+    # 9. Check agent-improvement structure
+    improvement_dir = REPO_ROOT / "agent-improvement"
+    for sub in ["inbox", "triage", "reports", "schemas"]:
+        d = improvement_dir / sub
+        if not d.exists():
+            errors.append(f"MISSING agent-improvement directory: {d.relative_to(REPO_ROOT)}")
+    for schema_file in ["lesson.yaml", "project.yaml"]:
+        check_file_exists(
+            improvement_dir / "schemas" / schema_file,
+            f"improvement schema {schema_file}",
+            errors,
+        )
+
+    # 10. Check project lifecycle scripts exist
+    for script in ["init_project.py", "closeout_project.py", "capture_lessons.py", "triage_lessons.py"]:
+        check_file_exists(
+            REPO_ROOT / "scripts" / script,
+            f"project lifecycle script {script}",
+            errors,
         )
 
     return errors

@@ -12,7 +12,7 @@ PySpark analytics notebooks for Scopus bibliometric data, deployed to Databricks
 All canonical knowledge lives in `agent-core/`. Read these two files at the
 start of every task:
 
-1. `agent-core/rules/core-rules.md` — 18 non-negotiable rules
+1. `agent-core/rules/core-rules.md` — 21 non-negotiable rules
 2. `agent-core/catalog/knowledge-index.yaml` — topic → reference routing
 
 ## Available custom agents
@@ -27,13 +27,18 @@ start of every task:
 
 Full analytics playbook: `.agents/skills/ads-analyst/SKILL.md`
 
+## Project resources skill
+
+Project bootstrap, path derivation, session closeout: `.agents/skills/project-resources/SKILL.md`
+
 ## Environment
 
 - Databricks: `https://elsevier-dev.cloud.databricks.com`
 - Cluster: `0107-154653-j5wd510m`
 - S3 projects: `s3://rads-projects/short_term/<year>/`
 - Local venv: `.venv` (activate before any local Python work)
-- Scratch: `./tmp/` | Deliverables: `./output/`
+- Scratch: `./tmp/` or `projects/<id>/tmp/`
+- Deliverables: `./output/` or `projects/<id>/output/`
 
 ## Important invariants
 
@@ -41,5 +46,8 @@ Full analytics playbook: `.agents/skills/ads-analyst/SKILL.md`
 - Always LEFT JOIN secondary tables (APR, OrgDB, Source, SciVal, SDG, Patents, ADS)
 - Cast `afid` (long) → string before joining OrgDB
 - Convert ANI `Eid` with `long_eid_to_eidstr()` before joining SciVal
-- Store all code in `notebooks/<shortname>/`
+- New work in `projects/<project_id>/` (use `scripts/init_project.py`)
+- Legacy code in `notebooks/<shortname>/` still supported
 - Use parquet (not CSV) for Databricks → local handover
+- Run session closeout at end of every project session
+- Never directly edit core-rules.md — use the improvement pipeline

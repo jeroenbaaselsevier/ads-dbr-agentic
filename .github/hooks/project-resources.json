@@ -1,0 +1,38 @@
+{
+  "description": "Project lifecycle hooks for session management",
+  "hooks": {
+    "sessionStart": {
+      "description": "Create session state and check for active project",
+      "actions": [
+        "Create .agent-state/session.json with session_id, branch, timestamp",
+        "Check whether .agent-state/active_project.json exists",
+        "If yes, read project_id and suggest continuing that project",
+        "Create context/session-notes/<session_id>.md stub if missing"
+      ]
+    },
+    "sessionEnd": {
+      "description": "Verify that closeout has been performed",
+      "actions": [
+        "Check whether projects/<project_id>/context/session-notes/<session_id>.md exists",
+        "If missing, log warning to .agent-state/missing-closeouts.log",
+        "Suggest running scripts/closeout_project.py"
+      ]
+    },
+    "postToolUse": {
+      "description": "Track created artifacts for the deliverables manifest",
+      "watch_patterns": [
+        "projects/*/notebooks/**",
+        "projects/*/scripts/**",
+        "projects/*/output/**"
+      ],
+      "actions": [
+        "Append new file paths to .agent-state/pending-deliverables.json"
+      ]
+    }
+  },
+  "notes": [
+    "Hooks should support the closeout flow, not replace it",
+    "Real intelligence lives in scripts/ — hooks are for guardrails and plumbing",
+    "This file is a specification, not executable code — agent platforms interpret it"
+  ]
+}
