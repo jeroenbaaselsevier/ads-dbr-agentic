@@ -179,3 +179,67 @@ Typical sequence after a Databricks notebook writes parquet to S3:
 3. Run aggregations / joins locally.
 4. Generate charts and export to `output/`.
 5. Report file paths to the user.
+
+---
+
+## Sharing output files (public download links)
+
+When the user asks for a **shareable / downloadable link** for a deliverable
+file, copy it into the `rads-custom-data` S3 bucket. Files there are publicly
+readable and are auto-deleted after **30 days**.
+
+### URL pattern
+```
+https://rads-custom-data.s3.amazonaws.com/download/<random_string>/<filename>
+```
+
+### From a Databricks notebook (preferred)
+Use the library functions — they write a JSON instruction picked up by a cron
+job that handles the copy and notifies the recipient:
+```python
+import dataframe_functions
+
+# Share a DataFrame directly (exports + shares in one call):
+dataframe_functions.share_dataframe(
+    df_result,
+    recipient='user@elsevier.com',
+    dataset_name='my_analysis_output_20260301',
+    format='csv',           # or 'json'
+    compressed=True,        # default
+)
+
+# Or share an already-exported S3 path:
+dataframe_functions.share_file_path(
+    s3_path='s3://rads-projects/short_term/2026/2026_XXX_myproject/output/results',
+    recipient='user@elsevier.com',
+    dataset_name='my_analysis_output_20260301',
+)
+```
+The function writes a JSON instruction file to
+`s3://rads-projects/temporary_to_be_deleted/custom_data/<md5>.json`. A cron job
+reads this, copies the file to
+`s3://rads-custom-data/download/<random_string>/<filename>`, and emails the
+download link to the recipient.
+
+**Constraint:** `share_file_path` only accepts paths under `s3://rads-projects/`.
+
+### From a local script
+When files are already local (in `./output/`) or you need to create a link
+without a Databricks notebook, upload directly to the same bucket pattern:
+```python
+import boto3, os, secrets
+
+s3 = boto3.client('s3', region_name='us-east-1')
+
+local_file = './output/my_results.csv.gz'
+filename   = os.path.basename(local_file)
+rand_token = secrets.token_urlsafe(12)          # 12-byte = 16-char URL-safe string
+s3_key     = f'download/{rand_token}/{filename}'
+
+s3.upload_file(local_file, 'rads-custom-data', s3_key)
+
+url = f'https://rads-custom-data.s3.amazonaws.com/{s3_key}'
+print(f'Download link (valid 30 days):\n{url}')
+```
+
+> Always report the full URL to the user. Remind them the link expires in 30 days.

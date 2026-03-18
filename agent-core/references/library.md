@@ -36,8 +36,8 @@ sys.path.append('/Workspace/rads/library/')
 | `df_cached` | `(df, str_path, format="parquet", partitions=1, ...)` | Write-once cache: saves df to parquet if not present, then reads back. Uses `repartition` (not `coalesce`) to avoid stage fusion. |
 | `export_df_csv` | `(df, name, path_storage, compressed=True, partitions=1, excel_format=False)` | Export DataFrame as CSV with friendly filename. `excel_format=True` uses windows-1252 + quoteAll for Excel compatibility. |
 | `export_df_json` | `(df, name, path_storage, compressed=True, partitions=1)` | Export as newline-delimited JSON with friendly filename. |
-| `share_dataframe` | `(df, recipient, dataset_name, ...)` | Share a DataFrame with an external recipient. |
-| `share_file_path` | `(s3_path, recipient, dataset_name, ...)` | Share an S3 path with a recipient. |
+| `share_dataframe` | `(df, recipient, dataset_name, format='csv', compressed=True, partitions=1)` | Export a DataFrame and share it as a public download link via the `rads-custom-data` cron pipeline. Writes a JSON instruction to `rads-projects/temporary_to_be_deleted/custom_data/`. See local-python runbook for the full sharing pattern. |
+| `share_file_path` | `(s3_path, recipient, dataset_name, override_max_number_objects=None)` | Share an already-exported S3 path as a public download link. `s3_path` must be under `s3://rads-projects/`. Writes a JSON instruction picked up by cron; cron copies to `s3://rads-custom-data/download/<rand>/<file>` and emails recipient. |
 | `check_path_for_completeness` | `(path, show_sub_path=False)` | Validate that a cache path has a `_SUCCESS` marker. |
 | `df_all_struct_to_json` | `(df)` | Convert all struct and array columns to JSON strings — useful before CSV export. |
 
