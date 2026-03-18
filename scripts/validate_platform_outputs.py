@@ -23,18 +23,23 @@ GENERATED_FILES = [
     (".github/copilot-instructions.md", "AUTO-GENERATED"),
     (".github/agents/analyst.agent.md", "AUTO-GENERATED"),
     (".github/agents/project-resources.agent.md", "AUTO-GENERATED"),
+    (".github/agents/agent-trainer.agent.md", "AUTO-GENERATED"),
     ("CLAUDE.md", "AUTO-GENERATED"),
     ("AGENTS.md", "AUTO-GENERATED"),
     (".claude/skills/ads-analyst/SKILL.md", "AUTO-GENERATED"),
     (".claude/skills/project-resources/SKILL.md", "AUTO-GENERATED"),
+    (".claude/skills/agent-trainer/SKILL.md", "AUTO-GENERATED"),
     (".claude/agents/analyst.md", "AUTO-GENERATED"),
     (".claude/agents/schema-explorer.md", "AUTO-GENERATED"),
     (".claude/agents/reviewer.md", "AUTO-GENERATED"),
+    (".claude/agents/agent-trainer.md", "AUTO-GENERATED"),
     (".agents/skills/ads-analyst/SKILL.md", "AUTO-GENERATED"),
     (".agents/skills/project-resources/SKILL.md", "AUTO-GENERATED"),
+    (".agents/skills/agent-trainer/SKILL.md", "AUTO-GENERATED"),
     (".codex/agents/analyst.toml", "AUTO-GENERATED"),
     (".codex/agents/schema-explorer.toml", "AUTO-GENERATED"),
     (".codex/agents/reviewer.toml", "AUTO-GENERATED"),
+    (".codex/agents/agent-trainer.toml", "AUTO-GENERATED"),
 ]
 
 

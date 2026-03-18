@@ -26,6 +26,7 @@ start of every task:
 | `analyst` | `.codex/agents/analyst.toml` | Full Spark + local analytics workflow |
 | `schema-explorer` | `.codex/agents/schema-explorer.toml` | Schema lookup, query contracts |
 | `reviewer` | `.codex/agents/reviewer.toml` | Quality checks on notebooks and results |
+| `agent-trainer` | `.codex/agents/agent-trainer.toml` | Agent maintenance and knowledge promotion |
 
 ## Analyst skill
 
@@ -34,6 +35,10 @@ Full analytics playbook: `.agents/skills/ads-analyst/SKILL.md`
 ## Project resources skill
 
 Project bootstrap, path derivation, session closeout: `.agents/skills/project-resources/SKILL.md`
+
+## Agent trainer skill
+
+Agent maintenance and knowledge promotion: `.agents/skills/agent-trainer/SKILL.md`
 
 ## Environment
 
@@ -55,3 +60,4 @@ Project bootstrap, path derivation, session closeout: `.agents/skills/project-re
 - Use parquet (not CSV) for Databricks → local handover
 - Run session closeout at end of every project session
 - Never directly edit core-rules.md — use the improvement pipeline
+- Agent maintenance uses the trainer role — route corrections through `agent-improvement/`

@@ -36,6 +36,7 @@ REQUIRED_ROLES = [
     "results-packager.md",
     "reviewer.md",
     "project-resources.md",
+    "agent-trainer.md",
 ]
 
 REQUIRED_TOOL_CONTRACTS = [
@@ -49,6 +50,7 @@ REQUIRED_RUNBOOKS = [
     "databricks.md",
     "local-python.md",
     "aws-and-s3.md",
+    "agent-maintenance.md",
 ]
 
 
@@ -140,15 +142,20 @@ def validate(verbose: bool = True) -> list:
         d = improvement_dir / sub
         if not d.exists():
             errors.append(f"MISSING agent-improvement directory: {d.relative_to(REPO_ROOT)}")
-    for schema_file in ["lesson.yaml", "project.yaml"]:
+    for schema_file in ["lesson.yaml", "project.yaml", "promotion.yaml"]:
         check_file_exists(
             improvement_dir / "schemas" / schema_file,
             f"improvement schema {schema_file}",
             errors,
         )
 
+    # Check promotions directory exists
+    promotions_dir = improvement_dir / "promotions"
+    if not promotions_dir.exists():
+        errors.append(f"MISSING agent-improvement directory: {promotions_dir.relative_to(REPO_ROOT)}")
+
     # 10. Check project lifecycle scripts exist
-    for script in ["init_project.py", "closeout_project.py", "capture_lessons.py", "triage_lessons.py", "activate_project.py"]:
+    for script in ["init_project.py", "closeout_project.py", "capture_lessons.py", "triage_lessons.py", "activate_project.py", "promote_lessons.py"]:
         check_file_exists(
             REPO_ROOT / "scripts" / script,
             f"project lifecycle script {script}",

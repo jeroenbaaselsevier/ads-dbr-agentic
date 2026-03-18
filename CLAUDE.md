@@ -28,6 +28,7 @@ For project bootstrap, path derivation, and session closeout:
 | `analyst` | `.claude/agents/analyst.md` | Orchestrate and deliver analyses |
 | `schema-explorer` | `.claude/agents/schema-explorer.md` | Schema lookup, query contracts |
 | `reviewer` | `.claude/agents/reviewer.md` | Quality-check notebooks and results |
+| `agent-trainer` | `.claude/agents/agent-trainer.md` | Agent maintenance and knowledge promotion |
 
 ## Environment
 
@@ -47,3 +48,10 @@ For project bootstrap, path derivation, and session closeout:
 - Notebooks (legacy): `notebooks/<shortname>/`
 - Self-improvement inbox: `agent-improvement/inbox/`
 - Platform adapters: `.claude/`, `.github/agents/`, `AGENTS.md`
+
+## Knowledge maintenance
+
+Ordinary analysis uses the analyst role. Agent maintenance — teaching new facts,
+consolidating lessons, promoting corrections — uses the **agent-trainer** role.
+Route recurring corrections through `agent-improvement/` rather than directly
+editing generated instructions. See `agent-core/runbooks/agent-maintenance.md`.

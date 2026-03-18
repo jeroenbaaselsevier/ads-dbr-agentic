@@ -66,3 +66,28 @@ platform files. **Never hand-edit generated platform files** — they carry an
 2. Add a handler in `scripts/build_agent_adapters.py`.
 3. Generate and test the output files.
 4. Add the generated file paths to `scripts/validate_platform_outputs.py`.
+
+## How agent knowledge evolves
+
+Knowledge improvement follows a governed pipeline:
+
+1. **Capture** — lessons are recorded during project work via
+   `scripts/capture_lessons.py` into project context and/or
+   `agent-improvement/inbox/`.
+2. **Triage** — `scripts/triage_lessons.py` groups, deduplicates, and
+   identifies promotion candidates.
+3. **Promote** — the **agent-trainer** role (`roles/agent-trainer.md`) reviews
+   lessons and promotes them to the closest canonical target using
+   `scripts/promote_lessons.py`. Promotion records are saved to
+   `agent-improvement/promotions/`.
+4. **Validate** — `scripts/validate_agent_core.py` checks canonical
+   consistency.
+5. **Rebuild** — `scripts/build_agent_adapters.py` regenerates all platform
+   wrappers.
+6. **Verify** — `scripts/validate_platform_outputs.py` confirms generated
+   files are intact.
+7. **Eval** — if behaviour changed, relevant evals under `evals/tasks/` are
+   run.
+
+See `runbooks/agent-maintenance.md` for the full maintenance procedure and
+file-target routing matrix.

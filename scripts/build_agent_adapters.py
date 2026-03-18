@@ -101,6 +101,20 @@ ROLES = [
             "output paths, and coverage warnings."
         ),
     },
+    {
+        "role_name": "agent-trainer",
+        "role_file": "agent-trainer.md",
+        "role_title": "Agent Trainer",
+        "role_description": (
+            "Classifies, routes, and promotes lessons into the canonical "
+            "knowledge base. Governed maintenance role — explicitly invoked."
+        ),
+        "agent_name": "agent-trainer",
+        "agent_description": (
+            "Agent maintenance and knowledge promotion. Classifies lessons, "
+            "updates canonical files, regenerates adapters, and runs validations."
+        ),
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -230,6 +244,51 @@ def build_all(check_mode: bool = False) -> int:
     content = render(tmpl, CONFIG)
     drift_count += write_generated(
         REPO_ROOT / ".agents/skills/project-resources/SKILL.md",
+        content,
+        check_mode,
+    )
+
+    # 12. Copilot: agent-trainer.agent.md
+    tmpl = platform / "copilot/templates/agent-trainer.agent.md.j2"
+    content = render(tmpl, CONFIG)
+    drift_count += write_generated(
+        REPO_ROOT / ".github/agents/agent-trainer.agent.md",
+        content,
+        check_mode,
+    )
+
+    # 13. Claude: agent-trainer subagent + skill
+    tmpl = platform / "claude/templates/subagent.md.j2"
+    trainer_role = [r for r in ROLES if r["role_name"] == "agent-trainer"][0]
+    context = {**CONFIG, **trainer_role}
+    content = render(tmpl, context)
+    drift_count += write_generated(
+        REPO_ROOT / ".claude/agents/agent-trainer.md",
+        content,
+        check_mode,
+    )
+
+    tmpl = platform / "claude/templates/agent-trainer.SKILL.md.j2"
+    content = render(tmpl, CONFIG)
+    drift_count += write_generated(
+        REPO_ROOT / ".claude/skills/agent-trainer/SKILL.md",
+        content,
+        check_mode,
+    )
+
+    # 14. Codex: agent-trainer custom agent + skill
+    tmpl = platform / "codex/templates/custom-agent.toml.j2"
+    content = render(tmpl, context)
+    drift_count += write_generated(
+        REPO_ROOT / ".codex/agents/agent-trainer.toml",
+        content,
+        check_mode,
+    )
+
+    tmpl = platform / "codex/templates/agent-trainer.SKILL.md.j2"
+    content = render(tmpl, CONFIG)
+    drift_count += write_generated(
+        REPO_ROOT / ".agents/skills/agent-trainer/SKILL.md",
         content,
         check_mode,
     )

@@ -1,0 +1,66 @@
+# Promotion Schema — agent-improvement
+# Defines the structured format for promotion records.
+# Promotions flow: inbox/lessons → promote_lessons.py → promotions/
+
+required_fields:
+  - promotion_id    # PRO-YYYY-MM-DD-NNN
+  - created_at      # ISO 8601 UTC timestamp
+  - source_lessons  # list of lesson IDs or inbox file paths
+  - scope           # project | client | user | global
+  - target_files    # list of canonical file paths to update
+  - action_type     # draft | apply
+  - status          # drafted | applied | rejected
+
+recommended_fields:
+  - rationale           # why this promotion is warranted
+  - change_summary      # one-paragraph description of the change
+  - validations_run     # list of validation scripts that passed
+  - evals_run           # list of eval tasks that ran (if behaviour changed)
+  - adapters_rebuilt    # true | false
+  - reviewer            # who approved (user name or "auto")
+  - notes               # free-text elaboration
+  - rejected_reason     # if status is rejected, why
+
+enums:
+  scope:
+    - project   # not actually promoted — stays local
+    - client    # promoted to client profile
+    - user      # promoted to user profile
+    - global    # promoted to agent-core canonical files
+
+  action_type:
+    - draft     # record created, changes proposed but not applied
+    - apply     # changes applied to target files
+
+  status:
+    - drafted   # promotion record created, awaiting review
+    - applied   # changes applied and validated
+    - rejected  # reviewed and intentionally declined
+
+# Example promotion record
+example: |
+  promotion_id: PRO-2026-03-18-001
+  created_at: 2026-03-18T17:00:00Z
+  source_lessons:
+    - LES-2026-03-18-001
+    - LES-2026-03-15-003
+  scope: global
+  target_files:
+    - agent-core/references/rosetta.md
+    - agent-core/catalog/tables/rosetta.yaml
+  action_type: apply
+  status: applied
+  rationale: >
+    Rosetta publisher columns confirmed as preferred current fields
+    across two separate projects.
+  change_summary: >
+    Updated rosetta.md to document preferred unsuffixed publisher columns.
+    Updated rosetta.yaml with column validators.
+  validations_run:
+    - scripts/validate_agent_core.py
+    - scripts/validate_platform_outputs.py
+  evals_run: []
+  adapters_rebuilt: true
+  reviewer: auto
+  notes: >
+    No behaviour change — documentation update only. No eval needed.
