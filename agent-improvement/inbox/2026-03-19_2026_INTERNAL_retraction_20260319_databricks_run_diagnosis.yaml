@@ -1,0 +1,31 @@
+source_project: 2026_INTERNAL_retraction
+source_session: 20260319_databricks_run_diagnosis
+captured_at: '2026-03-19T11:11:47Z'
+lessons:
+- scope: global
+  memory_type: procedural
+  category: tooling
+  summary: When a Databricks notebook run launched via databricks jobs submit fails,
+    the parent submit run often exposes only a generic workload failure. The reliable
+    debugging path is to call databricks jobs get-run on the parent run, extract tasks[].run_id,
+    then call databricks jobs get-run-output on the task-level run id to read the
+    real error and error_trace. For multi-task or submit runs, get-run-output on the
+    parent run is often empty or misleading, and exported static notebook HTML can
+    also hide the real failure behind a client-side Network Error wrapper.
+  confidence: high
+  impact: high
+  recurrence_hint: systematic
+  observed_in:
+  - projects/2026_INTERNAL_retraction/notebooks/spark/retraction_or_tables_for_revision.py
+  suggested_action:
+    target: agent-core/runbooks/databricks.md
+    change_type: doc_update
+    proposed_eval: databricks-task-run-error-triage
+  status: captured
+  notes: This has recurred across multiple debugging sessions. The agent initially
+    stopped at the parent run's generic workload failure or at misleading exported
+    HTML, and missed the actual Python/Spark traceback that was available in the task-level
+    get-run-output payload under error and error_trace.
+  id: LES-2026-03-19-001
+  project_id: 2026_INTERNAL_retraction
+  captured_at: '2026-03-19T11:11:47Z'
