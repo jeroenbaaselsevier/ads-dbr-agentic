@@ -1,0 +1,36 @@
+session_id: 20260319_s3_glacier_restore_expedite
+project_id: 2026_INTERNAL_retraction
+captured_at: '2026-03-19T14:04:56Z'
+lessons:
+- scope: global
+  memory_type: procedural
+  category: tooling
+  summary: 'When objects under /mnt/els/rads-projects/ map to Glacier storage classes
+    in S3, Databricks reads can fail until restore completes. Use S3-native restore
+    flow: map mount path to s3:// URI, submit restore with aws s3api restore-object
+    --restore-request ''{"Days":7,"GlacierJobParameters":{"Tier":"Expedited"}}'' for
+    urgent cases, and verify status with aws s3api head-object --query Restore. Interpret
+    Restore correctly: ongoing-request="true" means restore is still running; restore-object
+    errors like RestoreAlreadyInProgress do not mean data is restored. For bulk prefixes,
+    classify every key and verify coverage against the full key list; do not rely
+    on tail output or wrapped terminal lines.'
+  confidence: high
+  impact: high
+  recurrence_hint: systematic
+  observed_in:
+  - projects/2026_INTERNAL_retraction/notebooks/spark/retraction_or_tables_for_revision.py
+  - tmp/upgrade_affinst_restore_tier_v2_20260319.log
+  - tmp/upgrade_affinst_restore_tier_v2_retry_20260319.log
+  - tmp/upgrade_affinst_restore_tier_v2_remaining_20260319.log
+  suggested_action:
+    target: agent-core/runbooks/aws-and-s3.md
+    change_type: doc_update
+    proposed_eval: s3-glacier-restore-expedite-and-verify
+  status: captured
+  notes: Lifecycle policies on rads-projects and similar buckets can auto-transition
+    older project cache objects to Glacier tiers. Global guidance should include restore
+    request patterns, expedited urgency option, verification semantics, and a robust
+    bulk-processing QA checklist.
+  id: LES-2026-03-19-001
+  project_id: 2026_INTERNAL_retraction
+  captured_at: '2026-03-19T14:04:56Z'

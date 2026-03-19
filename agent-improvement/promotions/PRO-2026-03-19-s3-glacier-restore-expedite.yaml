@@ -1,0 +1,24 @@
+promotion_id: PRO-2026-03-19-001
+created_at: '2026-03-19T14:05:04Z'
+source_lessons:
+- LES-2026-03-19-001
+scope: global
+target_files:
+- agent-core/runbooks/aws-and-s3.md
+action_type: draft
+status: drafted
+change_summary: 'When objects under /mnt/els/rads-projects/ map to Glacier storage
+  classes in S3, Databricks reads can fail until restore completes. Use S3-native
+  restore flow: map mount path to s3:// URI, submit restore with aws s3api restore-object
+  --restore-request ''{"Days":7,"GlacierJobParameters":{"Tier":"Expedited"}}'' for
+  urgent cases, and verify status with aws s3api head-object --query Restore. Interpret
+  Restore correctly: ongoing-request="true" means restore is still running; restore-object
+  errors like RestoreAlreadyInProgress do not mean data is restored. For bulk prefixes,
+  classify every key and verify coverage against the full key list; do not rely on
+  tail output or wrapped terminal lines.'
+apply_safety: safe
+validations_run: []
+evals_run: []
+adapters_rebuilt: false
+reviewer: null
+notes: null
