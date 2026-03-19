@@ -1,0 +1,59 @@
+id: LES-2026-03-19-rosetta-maintenance
+captured_at: 2026-03-19T00:00:00Z
+project_id: 2026_INTERNAL_retraction
+scope: global
+memory_type: semantic
+category: schema
+summary: >
+  Rosetta table is manually maintained in Excel with no standardized data collection
+  process. Home-grown since 2013, single maintainer, one major update per year around
+  June. Historic data not updated. Some metadata fields never updated (crossref_id,
+  jcr_abbrev, cwts_id, nlm_id). Long-tail publisher names are assumptions. No
+  continuity plan.
+confidence: high
+impact: high
+recurrence_hint: systematic
+observed_in:
+  - Direct communication from Rosetta maintainer (March 2026)
+suggested_action:
+  target: |
+    agent-core/references/rosetta.md
+    agent-core/catalog/tables/rosetta.yaml
+  change_type: doc_update
+  proposed_eval: null
+status: captured
+
+details: |
+  **Rosetta table maintenance model:**
+  
+  - Home-grown (first version, Andrew's team, 2013)
+  - Meant for internal use only
+  - Manually maintained in Excel (source: https://elsevier.atlassian.net/wiki/spaces/RPA/pages/56939305516/Rosetta+table)
+  - Data collection: manual web lookup (Google, AI tools), copy-paste to Excel, VLOOKUP, manual typing
+  - No clear process for data collection
+  
+  **Coverage and assumption caveats:**
+  
+  - Long-tail publishers (small article output, conference proceedings): publisher names and business model are assumptions
+  - Some metadata fields NEVER updated: crossref_id, jcr_abbrev, cwts_id, nlm_id
+  - Historic data is NOT updated unless errors are spotted
+  
+  **Governance:**
+  
+  - No agreed conventions on publisher imprint groupings or name conventions (maintained by individual)
+  - Single maintainer (as of March 2026), no continuity plan
+  - One major update per year around June, no strict deadlines
+  
+  **Implications:**
+  
+  - Users should expect incomplete or stale Rosetta enrichment, especially for:
+    - Long-tail publishers (assumptions about business model)
+    - Metadata fields that are never updated
+    - Historic data
+  - Updates are ad-hoc and not guaranteed to be complete each year
+  - No SLA or predictable refresh cycle
+  
+notes: >
+  This is direct knowledge from the Rosetta maintainer. When combined with JOIN
+  caveats already documented (6.8% match rate), users should understand that Rosetta
+  enrichment is sparse and has significant caveats even when it does match.
