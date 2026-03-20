@@ -17,25 +17,20 @@ from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.classification import LogisticRegression
 import math
 import json
+import numpy as np
 
 # COMMAND ----------
 
 # Paths from prior retraction work
-AUTHOR_FINAL_PATH = "/mnt/els/rads-users/robergeg/gender_retractions/df_author_final"
-OUTPUT_BASE = "/mnt/els/rads-projects/short_term/2026/2026_INTERNAL_retraction/output/retraction_or_tables_paperyears_20260319"
+AUTHOR_FINAL_PATH = "/mnt/els/rads-users/robergeg/gender_retractions/df_author_final_20240801"
+OUTPUT_BASE = "/mnt/els/rads-projects/short_term/2026/2026_INTERNAL_retraction/output/retraction_or_tables_v3_20260320"
+LOCAL_EXPORT_BASE = f"{OUTPUT_BASE}/local_model_input"
 
 # Parquet cache for expensive intermediates.
 # On first run these are computed and written. On reruns they are read directly.
 # Change the version suffix to invalidate the cache after source data or filter changes.
-CACHE_BASE = "/mnt/els/rads-projects/short_term/2026/2026_INTERNAL_retraction/cache/or_tables_v2_paperyears"
-ANALYSIS_DF_CACHE    = f"{CACHE_BASE}/analysis_df"
-ALL_DESIGN_CACHE     = f"{CACHE_BASE}/all_design_df"
-TOP_DESIGN_CACHE     = f"{CACHE_BASE}/top_design_df"
-COEF_CACHE_BASE      = f"{CACHE_BASE}/coefficients"
-ALL_UNIV_COEF_CACHE  = f"{COEF_CACHE_BASE}/all_univ.json"
-ALL_MULTI_COEF_CACHE = f"{COEF_CACHE_BASE}/all_multi.json"
-TOP_UNIV_COEF_CACHE  = f"{COEF_CACHE_BASE}/top_univ.json"
-TOP_MULTI_COEF_CACHE = f"{COEF_CACHE_BASE}/top_multi.json"
+CACHE_BASE = "/mnt/els/rads-projects/short_term/2026/2026_INTERNAL_retraction/cache/or_tables_v3_correct_snapshot"
+BASE_ANALYSIS_CACHE = f"{CACHE_BASE}/analysis_df_base"
 
 # Paper-years: compute from Author_Country_History (distinct active years per author).
 # Snapshot date must match the ANI snapshot used for df_author_final.
@@ -44,9 +39,61 @@ AUTHOR_COUNTRY_HISTORY_TABLE = "fca_ds.author_country_history_ani_20240801"
 PAPER_YEARS_PATH = None   # legacy parquet path (unused when PAPER_YEARS_FROM_HIVE=True)
 PAPER_YEARS_COL = "paper_years"
 
+RUN_CONFIGS = [
+    {
+        "name": "papers_raw",
+        "exposure_col": "papers_raw",
+        "display_label": "Publication volume (per paper)",
+        "use_tertile_pub": False,
+    },
+    {
+        "name": "papers_log10",
+        "exposure_col": "papers_log10",
+        "display_label": "Publication volume (log10 papers)",
+        "use_tertile_pub": False,
+    },
+    {
+        "name": "papers_tertile",
+        "exposure_col": "papers_raw",
+        "display_label": "Publication volume (tertile of papers)",
+        "use_tertile_pub": True,
+    },
+    {
+        "name": "paperyears_raw",
+        "exposure_col": "paper_years_raw",
+        "display_label": "Publication volume (per paper-year)",
+        "use_tertile_pub": False,
+    },
+    {
+        "name": "paperyears_log10",
+        "exposure_col": "paper_years_log10",
+        "display_label": "Publication volume (log10 paper-years)",
+        "use_tertile_pub": False,
+    },
+    {
+        "name": "paperyears_tertile",
+        "exposure_col": "paper_years_raw",
+        "display_label": "Publication volume (tertile of paper-years)",
+        "use_tertile_pub": True,
+    },
+]
+
 # Analysis toggles
 INCLUDE_UNKNOWN_GENDER = False
 RUN_PUBLICATION_TERTILE_SENSITIVITY = True
+
+LOCAL_EXPORT_COLUMNS = [
+    "label",
+    "gender_clean",
+    "career_age_clean",
+    "income_clean",
+    "field_clean",
+    "top_cited_yes",
+    "papers_raw",
+    "papers_log10",
+    "paper_years_raw",
+    "paper_years_log10",
+]
 
 # COMMAND ----------
 
@@ -84,7 +131,7 @@ def load_author_base(author_final_path: str):
             "label",
             F.lower(F.col("gender_clean")).alias("gender_clean"),
             "career_age_clean",
-            "income_clean",
+            F.coalesce(F.col("income_clean"), F.lit("unknown")).alias("income_clean"),
             "field_clean",
             F.col("np").cast("double").alias("np"),
             "top_cited_yes",
@@ -96,7 +143,7 @@ def load_author_base(author_final_path: str):
     return df
 
 
-def add_publication_exposure(df):
+def add_publication_columns(df):
     if PAPER_YEARS_FROM_HIVE:
         # Compute paper_years = number of distinct calendar years in which the
         # author had >=1 publication, from Author_Country_History.
@@ -109,29 +156,25 @@ def add_publication_exposure(df):
             .select("auid", F.col("ch.sort_year").alias("sort_year"))
             .distinct()
             .groupBy("auid")
-            .agg(F.count("*").cast("double").alias("paper_years"))
-        )
-        df = (
-            df
-            .join(dpy, ["auid"], "left")
-            .withColumn("pub_exposure", F.coalesce(F.col("paper_years"), F.col("np")))
-            .withColumn("pub_exposure_type", F.when(F.col("paper_years").isNotNull(), F.lit("paper_years")).otherwise(F.lit("papers")))
+            .agg(F.count("*").cast("double").alias("paper_years_raw"))
         )
     elif PAPER_YEARS_PATH:
-        dpy = spark.read.parquet(PAPER_YEARS_PATH).select("auid", F.col(PAPER_YEARS_COL).cast("double").alias("paper_years"))
-        df = (
-            df
-            .join(dpy, ["auid"], "left")
-            .withColumn("pub_exposure", F.coalesce(F.col("paper_years"), F.col("np")))
-            .withColumn("pub_exposure_type", F.when(F.col("paper_years").isNotNull(), F.lit("paper_years")).otherwise(F.lit("papers")))
-        )
+        dpy = spark.read.parquet(PAPER_YEARS_PATH).select("auid", F.col(PAPER_YEARS_COL).cast("double").alias("paper_years_raw"))
     else:
-        df = (
-            df
-            .withColumn("pub_exposure", F.col("np"))
-            .withColumn("pub_exposure_type", F.lit("papers"))
-        )
+        dpy = df.select("auid").withColumn("paper_years_raw", F.lit(None).cast("double"))
+
+    df = (
+        df
+        .join(dpy, ["auid"], "left")
+        .withColumn("papers_raw", F.col("np").cast("double"))
+        .withColumn("papers_log10", F.log10(F.greatest(F.col("papers_raw"), F.lit(1.0))))
+        .withColumn("paper_years_log10", F.when(F.col("paper_years_raw").isNotNull(), F.log10(F.greatest(F.col("paper_years_raw"), F.lit(1.0)))))
+    )
     return df
+
+
+def set_publication_exposure(df, exposure_col):
+    return df.withColumn("pub_exposure", F.col(exposure_col).cast("double"))
 
 
 def add_reference_dummies(df, include_top_cited: bool, include_unknown_gender: bool, use_tertile_pub: bool = False):
@@ -259,22 +302,41 @@ def fit_logit(df, feature_cols, label_col="label"):
     summary = model.summary
 
     coefs = list(model.coefficients)
+
+    def _ses_from_observed_information(pred_df, n_features):
+        zero = np.zeros((n_features + 1, n_features + 1), dtype=float)
+
+        def seq_op(acc, row):
+            x = np.array([1.0] + list(row.features), dtype=float)
+            p = float(row.probability[1])
+            w = p * (1.0 - p)
+            if w > 0.0:
+                acc += w * np.outer(x, x)
+            return acc
+
+        def comb_op(left, right):
+            return left + right
+
+        info = pred_df.rdd.treeAggregate(zero, seq_op, comb_op, depth=2)
+        cov = np.linalg.pinv(info)
+        variances = np.clip(np.diag(cov)[1:], a_min=0.0, a_max=None)
+        return [float(math.sqrt(v)) for v in variances]
     
-    # Try to get standard errors from summary; if unavailable, use approximate SEs
-    # from the confidence intervals. BinaryLogisticRegressionTrainingSummary may
-    # not have coefficientStandardErrors in all Spark versions.
+    # Try to get model-based standard errors from Spark; if unavailable on this
+    # cluster build, derive them from the observed Fisher information matrix.
     try:
         ses = list(summary.coefficientStandardErrors)
         if len(ses) == len(coefs) + 1:
             ses = ses[:len(coefs)]
     except AttributeError:
-        # If SEs not available, compute from confidence intervals at 95% level
-        # SE ≈ (UCL - LCL) / (2 * 1.96)
         if hasattr(summary, 'coefficientStdErrors'):
             ses = list(summary.coefficientStdErrors)
         else:
-            # Set flat SEs (0.1) for all coefficients as fallback
-            ses = [0.1] * len(coefs)
+            pred_df = model.transform(vec_df).select("features", "probability")
+            ses = _ses_from_observed_information(pred_df, len(feature_cols))
+
+    if len(ses) > len(coefs):
+        ses = ses[:len(coefs)]
 
     out = {}
     for name, beta, se in zip(feature_cols, coefs, ses):
@@ -303,7 +365,7 @@ def _fmt(or_val, lcl, ucl):
     return f"{or_val:.3f}", f"[{lcl:.3f}, {ucl:.3f}]"
 
 
-def build_display_table(univ, multi, include_top_cited=True, include_unknown_gender=False, use_tertile_pub=False):
+def build_display_table(univ, multi, publication_label, include_top_cited=True, include_unknown_gender=False, use_tertile_pub=False):
     rows = []
 
     def add_row(variable, level, uni_key=None, multi_key=None, ref=False):
@@ -350,8 +412,7 @@ def build_display_table(univ, multi, include_top_cited=True, include_unknown_gen
         add_row("Publication volume (tertile)", "Tertile 2", uni_key="pub_t2", multi_key="pub_t2")
         add_row("Publication volume (tertile)", "Tertile 3 (highest)", uni_key="pub_t3", multi_key="pub_t3")
     else:
-        label = "Publication volume (per paper-year)" if PAPER_YEARS_FROM_HIVE or PAPER_YEARS_PATH else "Publication volume (per paper)"
-        add_row(label, "Per +1 unit", uni_key="pub_exposure", multi_key="pub_exposure")
+        add_row(publication_label, "Per +1 unit", uni_key="pub_exposure", multi_key="pub_exposure")
 
     # Top cited status (all-authors table only)
     if include_top_cited:
@@ -425,289 +486,270 @@ def _save_json(path, payload):
 def _has_expected_keys(payload, expected_keys):
     return isinstance(payload, dict) and set(expected_keys).issubset(set(payload.keys()))
 
-if _path_exists(ANALYSIS_DF_CACHE):
-    print(f"Loading analysis_df from cache: {ANALYSIS_DF_CACHE}")
-    analysis_df = spark.read.parquet(ANALYSIS_DF_CACHE)
-else:
-    print("Building analysis_df from source (will cache to parquet)...")
-    base_df = load_author_base(AUTHOR_FINAL_PATH)
-    base_df = add_publication_exposure(base_df)
 
-    if INCLUDE_UNKNOWN_GENDER:
-        analysis_df = base_df.filter(F.col("gender_clean").isin("female", "male", "unknown"))
+def _config_paths(config_name):
+    config_cache_base = f"{CACHE_BASE}/{config_name}"
+    coef_cache_base = f"{config_cache_base}/coefficients"
+    return {
+        "analysis_df": f"{config_cache_base}/analysis_df",
+        "all_design_df": f"{config_cache_base}/all_design_df",
+        "top_design_df": f"{config_cache_base}/top_design_df",
+        "all_univ_coef": f"{coef_cache_base}/all_univ.json",
+        "all_multi_coef": f"{coef_cache_base}/all_multi.json",
+        "top_univ_coef": f"{coef_cache_base}/top_univ.json",
+        "top_multi_coef": f"{coef_cache_base}/top_multi.json",
+        "output_base": f"{OUTPUT_BASE}/{config_name}",
+    }
+
+
+def _flatten_univariable_output(raw_out):
+    out = {}
+    for _, value in raw_out.items():
+        out.update(value)
+    return out
+
+
+def _load_or_compute_univariable(df, feature_sets, expected_keys, cache_path):
+    if _json_exists(cache_path):
+        out = _load_json(cache_path)
+        if _has_expected_keys(out, expected_keys):
+            print(f"Loaded coefficients from cache: {cache_path}")
+            return out
+        print(f"Coefficient cache stale/mismatched, recomputing: {cache_path}")
+
+    raw_out = fit_univariable(df, feature_sets)
+    out = _flatten_univariable_output(raw_out)
+    _save_json(cache_path, out)
+    print(f"Wrote coefficients to cache: {cache_path}")
+    return out
+
+
+def _load_or_compute_multivariable(df, feature_cols, expected_keys, cache_path):
+    if _json_exists(cache_path):
+        out = _load_json(cache_path)
+        if _has_expected_keys(out, expected_keys):
+            print(f"Loaded coefficients from cache: {cache_path}")
+            return out
+        print(f"Coefficient cache stale/mismatched, recomputing: {cache_path}")
+
+    out = fit_logit(df, feature_cols)
+    _save_json(cache_path, out)
+    print(f"Wrote coefficients to cache: {cache_path}")
+    return out
+
+
+def _get_design_df(df, cache_path, include_top_cited, include_unknown_gender, use_tertile_pub):
+    if _path_exists(cache_path):
+        print(f"Loading design matrix from cache: {cache_path}")
+        df_raw, feature_cols_raw = add_reference_dummies(
+            df,
+            include_top_cited=include_top_cited,
+            include_unknown_gender=include_unknown_gender,
+            use_tertile_pub=use_tertile_pub,
+        )
+        cached_df = spark.read.parquet(cache_path)
+        feature_cols = [c for c in df_raw.columns if c in cached_df.columns and c not in ("label",)]
+        feature_cols = [c for c in df_raw.columns if c in feature_cols]
+        return cached_df, feature_cols
+
+    df_raw, feature_cols = add_reference_dummies(
+        df,
+        include_top_cited=include_top_cited,
+        include_unknown_gender=include_unknown_gender,
+        use_tertile_pub=use_tertile_pub,
+    )
+    df_raw.write.mode("overwrite").parquet(cache_path)
+    print(f"Design matrix written to {cache_path}")
+    return spark.read.parquet(cache_path), feature_cols
+
+
+def export_local_model_inputs(df):
+    """Export a compact local-model dataset in row-level and grouped forms."""
+    slim_path = f"{LOCAL_EXPORT_BASE}/row_level_parquet"
+    grouped_path = f"{LOCAL_EXPORT_BASE}/grouped_parquet"
+
+    slim_df = df.select(*LOCAL_EXPORT_COLUMNS)
+    slim_df.write.mode("overwrite").parquet(slim_path)
+
+    grouped_df = (
+        slim_df
+        .groupBy(*LOCAL_EXPORT_COLUMNS)
+        .agg(F.count("*").cast("long").alias("n_obs"))
+    )
+    grouped_df.write.mode("overwrite").parquet(grouped_path)
+
+    print(f"Local row-level export saved to: {slim_path}")
+    print(f"Local grouped export saved to: {grouped_path}")
+    print("Local row-level rows:", slim_df.count())
+    print("Local grouped rows:", grouped_df.count())
+
+
+def run_single_config(base_df, config):
+    config_name = config["name"]
+    exposure_col = config["exposure_col"]
+    publication_label = config["display_label"]
+    use_tertile_pub = config["use_tertile_pub"]
+    paths = _config_paths(config_name)
+
+    print("=" * 80)
+    print(f"Running config: {config_name}")
+    print(f"Publication variable: {exposure_col}")
+
+    if _path_exists(paths["analysis_df"]):
+        print(f"Loading analysis_df from cache: {paths['analysis_df']}")
+        analysis_df = spark.read.parquet(paths["analysis_df"])
     else:
-        analysis_df = base_df.filter(F.col("gender_clean").isin("female", "male"))
+        analysis_df = set_publication_exposure(base_df, exposure_col).filter(F.col("pub_exposure").isNotNull())
+        analysis_df.write.mode("overwrite").parquet(paths["analysis_df"])
+        print(f"analysis_df written to {paths['analysis_df']}")
+        analysis_df = spark.read.parquet(paths["analysis_df"])
 
-    analysis_df = analysis_df.filter(
-        F.col("career_age_clean").isNotNull()
-        & F.col("income_clean").isNotNull()
-        & F.col("field_clean").isNotNull()
-        & F.col("pub_exposure").isNotNull()
-    )
-    analysis_df.write.mode("overwrite").parquet(ANALYSIS_DF_CACHE)
-    print(f"analysis_df written to {ANALYSIS_DF_CACHE}")
-    analysis_df = spark.read.parquet(ANALYSIS_DF_CACHE)
+    analysis_df.cache()
+    print("Rows for analysis:", analysis_df.count())
 
-analysis_df.cache()
-print("Rows for analysis:", analysis_df.count())
-print("Using publication exposure:", analysis_df.select("pub_exposure_type").first()[0])
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Model 1: All authors
-
-# COMMAND ----------
-
-if _path_exists(ALL_DESIGN_CACHE):
-    print(f"Loading all_df design matrix from cache: {ALL_DESIGN_CACHE}")
-    all_df_raw, all_features_raw = add_reference_dummies(
-        analysis_df, include_top_cited=True,
-        include_unknown_gender=INCLUDE_UNKNOWN_GENDER, use_tertile_pub=False,
-    )
-    # Read persisted copy for fast access; use column list from in-memory version
-    all_df = spark.read.parquet(ALL_DESIGN_CACHE)
-    all_features = [c for c in all_df_raw.columns if c in all_df.columns and c not in ("label",)]
-    # Restore canonical feature ordering
-    all_features = [c for c in all_df_raw.columns if c in all_features]
-else:
-    all_df_raw, all_features = add_reference_dummies(
+    # Model 1: all authors
+    all_df, all_features = _get_design_df(
         analysis_df,
+        paths["all_design_df"],
         include_top_cited=True,
         include_unknown_gender=INCLUDE_UNKNOWN_GENDER,
-        use_tertile_pub=False,
+        use_tertile_pub=use_tertile_pub,
     )
-    all_df_raw.write.mode("overwrite").parquet(ALL_DESIGN_CACHE)
-    print(f"all_df written to {ALL_DESIGN_CACHE}")
-    all_df = spark.read.parquet(ALL_DESIGN_CACHE)
+    all_df.cache()
 
-all_df.cache()
-
-all_univ_sets = {
-    "male": ["male"] + (["gender_unknown"] if INCLUDE_UNKNOWN_GENDER else []),
-    "career_1992_2001": ["career_1992_2001", "career_2002_2011", "career_ge2012"],
-    "income_other": ["income_other", "income_unknown"],
-    "pub_exposure": ["pub_exposure"],
-    "top_cited_yes": ["top_cited_yes"],
-    "male_x_young": ["male_x_young"],
-}
-
-field_cols = [c for c in all_features if c.startswith("field_")]
-if field_cols:
-    all_univ_sets[field_cols[0]] = field_cols
-
-all_expected_keys = list(all_features)
-
-if _json_exists(ALL_UNIV_COEF_CACHE):
-    all_univ = _load_json(ALL_UNIV_COEF_CACHE)
-    if _has_expected_keys(all_univ, all_expected_keys):
-        print(f"Loaded all_univ coefficients from cache: {ALL_UNIV_COEF_CACHE}")
-    else:
-        print("all_univ coefficient cache stale/mismatched; recomputing...")
-        all_univ_raw = fit_univariable(all_df, all_univ_sets)
-        all_univ = {}
-        for _, v in all_univ_raw.items():
-            all_univ.update(v)
-        _save_json(ALL_UNIV_COEF_CACHE, all_univ)
-else:
-    print("Computing all_univ coefficients...")
-    all_univ_raw = fit_univariable(all_df, all_univ_sets)
-    all_univ = {}
-    for _, v in all_univ_raw.items():
-        all_univ.update(v)
-    _save_json(ALL_UNIV_COEF_CACHE, all_univ)
-    print(f"Wrote all_univ coefficients to cache: {ALL_UNIV_COEF_CACHE}")
-
-if _json_exists(ALL_MULTI_COEF_CACHE):
-    all_multi = _load_json(ALL_MULTI_COEF_CACHE)
-    if _has_expected_keys(all_multi, all_expected_keys):
-        print(f"Loaded all_multi coefficients from cache: {ALL_MULTI_COEF_CACHE}")
-    else:
-        print("all_multi coefficient cache stale/mismatched; recomputing...")
-        all_multi = fit_logit(all_df, all_features)
-        _save_json(ALL_MULTI_COEF_CACHE, all_multi)
-else:
-    print("Computing all_multi coefficients...")
-    all_multi = fit_logit(all_df, all_features)
-    _save_json(ALL_MULTI_COEF_CACHE, all_multi)
-    print(f"Wrote all_multi coefficients to cache: {ALL_MULTI_COEF_CACHE}")
-
-all_table = build_display_table(
-    all_univ,
-    all_multi,
-    include_top_cited=True,
-    include_unknown_gender=INCLUDE_UNKNOWN_GENDER,
-    use_tertile_pub=False,
-)
-
-display(all_table)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Model 2: Top-cited authors only
-
-# COMMAND ----------
-
-if _path_exists(TOP_DESIGN_CACHE):
-    print(f"Loading top_df design matrix from cache: {TOP_DESIGN_CACHE}")
-    top_df0 = analysis_df.filter(F.col("top_cited_yes") == 1.0)
-    top_df_raw, top_features_raw = add_reference_dummies(
-        top_df0, include_top_cited=False,
-        include_unknown_gender=INCLUDE_UNKNOWN_GENDER, use_tertile_pub=False,
-    )
-    top_df = spark.read.parquet(TOP_DESIGN_CACHE)
-    top_features = [c for c in top_df_raw.columns if c in top_df.columns and c not in ("label",)]
-    top_features = [c for c in top_df_raw.columns if c in top_features]
-else:
-    top_df0 = analysis_df.filter(F.col("top_cited_yes") == 1.0)
-    top_df_raw, top_features = add_reference_dummies(
-        top_df0,
-        include_top_cited=False,
-        include_unknown_gender=INCLUDE_UNKNOWN_GENDER,
-        use_tertile_pub=False,
-    )
-    top_df_raw.write.mode("overwrite").parquet(TOP_DESIGN_CACHE)
-    print(f"top_df written to {TOP_DESIGN_CACHE}")
-    top_df = spark.read.parquet(TOP_DESIGN_CACHE)
-
-top_df.cache()
-
-top_univ_sets = {
-    "male": ["male"] + (["gender_unknown"] if INCLUDE_UNKNOWN_GENDER else []),
-    "career_1992_2001": ["career_1992_2001", "career_2002_2011", "career_ge2012"],
-    "income_other": ["income_other", "income_unknown"],
-    "pub_exposure": ["pub_exposure"],
-    "male_x_young": ["male_x_young"],
-}
-
-top_field_cols = [c for c in top_features if c.startswith("field_")]
-if top_field_cols:
-    top_univ_sets[top_field_cols[0]] = top_field_cols
-
-top_expected_keys = list(top_features)
-
-if _json_exists(TOP_UNIV_COEF_CACHE):
-    top_univ = _load_json(TOP_UNIV_COEF_CACHE)
-    if _has_expected_keys(top_univ, top_expected_keys):
-        print(f"Loaded top_univ coefficients from cache: {TOP_UNIV_COEF_CACHE}")
-    else:
-        print("top_univ coefficient cache stale/mismatched; recomputing...")
-        top_univ_raw = fit_univariable(top_df, top_univ_sets)
-        top_univ = {}
-        for _, v in top_univ_raw.items():
-            top_univ.update(v)
-        _save_json(TOP_UNIV_COEF_CACHE, top_univ)
-else:
-    print("Computing top_univ coefficients...")
-    top_univ_raw = fit_univariable(top_df, top_univ_sets)
-    top_univ = {}
-    for _, v in top_univ_raw.items():
-        top_univ.update(v)
-    _save_json(TOP_UNIV_COEF_CACHE, top_univ)
-    print(f"Wrote top_univ coefficients to cache: {TOP_UNIV_COEF_CACHE}")
-
-if _json_exists(TOP_MULTI_COEF_CACHE):
-    top_multi = _load_json(TOP_MULTI_COEF_CACHE)
-    if _has_expected_keys(top_multi, top_expected_keys):
-        print(f"Loaded top_multi coefficients from cache: {TOP_MULTI_COEF_CACHE}")
-    else:
-        print("top_multi coefficient cache stale/mismatched; recomputing...")
-        top_multi = fit_logit(top_df, top_features)
-        _save_json(TOP_MULTI_COEF_CACHE, top_multi)
-else:
-    print("Computing top_multi coefficients...")
-    top_multi = fit_logit(top_df, top_features)
-    _save_json(TOP_MULTI_COEF_CACHE, top_multi)
-    print(f"Wrote top_multi coefficients to cache: {TOP_MULTI_COEF_CACHE}")
-
-top_table = build_display_table(
-    top_univ,
-    top_multi,
-    include_top_cited=False,
-    include_unknown_gender=INCLUDE_UNKNOWN_GENDER,
-    use_tertile_pub=False,
-)
-
-display(top_table)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Sensitivity: publication tertiles
-
-# COMMAND ----------
-
-if RUN_PUBLICATION_TERTILE_SENSITIVITY:
-    all_df_t, all_features_t = add_reference_dummies(
-        analysis_df,
-        include_top_cited=True,
-        include_unknown_gender=INCLUDE_UNKNOWN_GENDER,
-        use_tertile_pub=True,
-    )
-
-    all_univ_sets_t = {
+    all_univ_sets = {
         "male": ["male"] + (["gender_unknown"] if INCLUDE_UNKNOWN_GENDER else []),
         "career_1992_2001": ["career_1992_2001", "career_2002_2011", "career_ge2012"],
         "income_other": ["income_other", "income_unknown"],
-        "pub_t2": ["pub_t2", "pub_t3"],
         "top_cited_yes": ["top_cited_yes"],
         "male_x_young": ["male_x_young"],
     }
-    field_cols_t = [c for c in all_features_t if c.startswith("field_")]
-    if field_cols_t:
-        all_univ_sets_t[field_cols_t[0]] = field_cols_t
+    if use_tertile_pub:
+        all_univ_sets["pub_t2"] = ["pub_t2", "pub_t3"]
+    else:
+        all_univ_sets["pub_exposure"] = ["pub_exposure"]
 
-    all_univ_raw_t = fit_univariable(all_df_t, all_univ_sets_t)
-    all_univ_t = {}
-    for _, v in all_univ_raw_t.items():
-        all_univ_t.update(v)
+    all_field_cols = [c for c in all_features if c.startswith("field_")]
+    if all_field_cols:
+        all_univ_sets[all_field_cols[0]] = all_field_cols
 
-    all_multi_t = fit_logit(all_df_t, all_features_t)
-    all_table_t = build_display_table(
-        all_univ_t,
-        all_multi_t,
+    all_expected_keys = list(all_features)
+    all_univ = _load_or_compute_univariable(all_df, all_univ_sets, all_expected_keys, paths["all_univ_coef"])
+    all_multi = _load_or_compute_multivariable(all_df, all_features, all_expected_keys, paths["all_multi_coef"])
+    all_table = build_display_table(
+        all_univ,
+        all_multi,
+        publication_label=publication_label,
         include_top_cited=True,
         include_unknown_gender=INCLUDE_UNKNOWN_GENDER,
-        use_tertile_pub=True,
+        use_tertile_pub=use_tertile_pub,
     )
-    display(all_table_t)
+    display(all_table)
 
-# COMMAND ----------
+    # Model 2: top-cited authors only
+    top_df0 = analysis_df.filter(F.col("top_cited_yes") == 1.0)
+    top_df, top_features = _get_design_df(
+        top_df0,
+        paths["top_design_df"],
+        include_top_cited=False,
+        include_unknown_gender=INCLUDE_UNKNOWN_GENDER,
+        use_tertile_pub=use_tertile_pub,
+    )
+    top_df.cache()
 
-# MAGIC %md
-# MAGIC ## Save outputs
+    top_univ_sets = {
+        "male": ["male"] + (["gender_unknown"] if INCLUDE_UNKNOWN_GENDER else []),
+        "career_1992_2001": ["career_1992_2001", "career_2002_2011", "career_ge2012"],
+        "income_other": ["income_other", "income_unknown"],
+        "male_x_young": ["male_x_young"],
+    }
+    if use_tertile_pub:
+        top_univ_sets["pub_t2"] = ["pub_t2", "pub_t3"]
+    else:
+        top_univ_sets["pub_exposure"] = ["pub_exposure"]
 
-# COMMAND ----------
+    top_field_cols = [c for c in top_features if c.startswith("field_")]
+    if top_field_cols:
+        top_univ_sets[top_field_cols[0]] = top_field_cols
 
-(
-    all_table
-    .withColumn("cohort", F.lit("all_authors"))
-    .write.mode("overwrite").option("header", True)
-    .csv(f"{OUTPUT_BASE}/all_authors_or_table_csv")
-)
+    top_expected_keys = list(top_features)
+    top_univ = _load_or_compute_univariable(top_df, top_univ_sets, top_expected_keys, paths["top_univ_coef"])
+    top_multi = _load_or_compute_multivariable(top_df, top_features, top_expected_keys, paths["top_multi_coef"])
+    top_table = build_display_table(
+        top_univ,
+        top_multi,
+        publication_label=publication_label,
+        include_top_cited=False,
+        include_unknown_gender=INCLUDE_UNKNOWN_GENDER,
+        use_tertile_pub=use_tertile_pub,
+    )
+    display(top_table)
 
-(
-    top_table
-    .withColumn("cohort", F.lit("top_cited_authors"))
-    .write.mode("overwrite").option("header", True)
-    .csv(f"{OUTPUT_BASE}/top_cited_or_table_csv")
-)
+    (
+        all_table
+        .withColumn("cohort", F.lit("all_authors"))
+        .write.mode("overwrite").option("header", True)
+        .csv(f"{paths['output_base']}/all_authors_or_table_csv")
+    )
+    (
+        top_table
+        .withColumn("cohort", F.lit("top_cited_authors"))
+        .write.mode("overwrite").option("header", True)
+        .csv(f"{paths['output_base']}/top_cited_or_table_csv")
+    )
+    (
+        all_table
+        .withColumn("cohort", F.lit("all_authors"))
+        .unionByName(top_table.withColumn("cohort", F.lit("top_cited_authors")))
+        .write.mode("overwrite").format("parquet").save(f"{paths['output_base']}/combined_or_tables_parquet")
+    )
+    print(f"Saved outputs to: {paths['output_base']}")
 
-(
-    all_table
-    .withColumn("cohort", F.lit("all_authors"))
-    .unionByName(top_table.withColumn("cohort", F.lit("top_cited_authors")))
-    .write.mode("overwrite").format("parquet").save(f"{OUTPUT_BASE}/combined_or_tables_parquet")
-)
+    all_df.unpersist()
+    top_df.unpersist()
+    analysis_df.unpersist()
 
-print("Saved outputs to:", OUTPUT_BASE)
+if _path_exists(BASE_ANALYSIS_CACHE):
+    print(f"Loading analysis_df_base from cache: {BASE_ANALYSIS_CACHE}")
+    analysis_df_base = spark.read.parquet(BASE_ANALYSIS_CACHE)
+else:
+    print("Building analysis_df_base from source (will cache to parquet)...")
+    base_df = load_author_base(AUTHOR_FINAL_PATH)
+    base_df = add_publication_columns(base_df)
+
+    if INCLUDE_UNKNOWN_GENDER:
+        analysis_df_base = base_df.filter(F.col("gender_clean").isin("female", "male", "unknown"))
+    else:
+        analysis_df_base = base_df.filter(F.col("gender_clean").isin("female", "male"))
+
+    analysis_df_base = analysis_df_base.filter(
+        F.col("career_age_clean").isNotNull()
+        & F.col("field_clean").isNotNull()
+    )
+    analysis_df_base.write.mode("overwrite").parquet(BASE_ANALYSIS_CACHE)
+    print(f"analysis_df_base written to {BASE_ANALYSIS_CACHE}")
+    analysis_df_base = spark.read.parquet(BASE_ANALYSIS_CACHE)
+
+analysis_df_base.cache()
+print("Rows in analysis_df_base:", analysis_df_base.count())
+print("Non-null paper-years:", analysis_df_base.filter(F.col("paper_years_raw").isNotNull()).count())
+
+export_local_model_inputs(analysis_df_base)
+
+for config in RUN_CONFIGS:
+    run_single_config(analysis_df_base, config)
+
+analysis_df_base.unpersist()
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Notes for manuscript table
 # MAGIC
-# MAGIC - Main model currently uses publication exposure per paper (`np`).
-# MAGIC - To use paper-years exposure, provide `PAPER_YEARS_PATH` with columns `auid` and `paper_years`.
+# MAGIC - This version uses the corrected `df_author_final_20240801` snapshot.
+# MAGIC - Publication-volume variants are written separately under `OUTPUT_BASE/{config_name}`.
+# MAGIC - Variants include raw counts, `log10(...)`, and tertiles for both papers and paper-years.
+# MAGIC - Local-model exports are written to `LOCAL_EXPORT_BASE/row_level_parquet` and `LOCAL_EXPORT_BASE/grouped_parquet`.
+# MAGIC - The grouped export has one row per unique predictor combination and a frequency column `n_obs` for weighted local logistic regression.
+# MAGIC - Saved design matrices already include `male` plus field dummies, which is sufficient to add field*male interaction terms later without rebuilding the base dataset.
 # MAGIC - To include unknown gender as explicit category, set `INCLUDE_UNKNOWN_GENDER = True` and rerun.

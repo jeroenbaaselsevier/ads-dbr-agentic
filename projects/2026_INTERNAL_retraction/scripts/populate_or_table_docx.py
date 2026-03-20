@@ -188,6 +188,12 @@ def build_doc(
         u_or, u_ci, m_or, m_ci = get_vals(data, var, lvl)
         fill_row(table, row_idx, u_or, u_ci, m_or, m_ci)
 
+    # Clear Top-cited status reference row when not applicable (top-cited cohort only)
+    if not include_top_cited_row:
+        # Row 21 is the "Top-cited status / No" reference row in the template
+        for cell in table.rows[21].cells:
+            clear_cell(cell, "")
+
     # Keep template row but align label text to chosen exposure definition.
     clear_cell(table.rows[18].cells[0], pub_label)
 
