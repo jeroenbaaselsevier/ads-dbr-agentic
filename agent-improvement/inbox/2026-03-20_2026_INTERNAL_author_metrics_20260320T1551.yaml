@@ -1,0 +1,30 @@
+source_project: 2026_INTERNAL_author_metrics
+source_session: 20260320T1551
+captured_at: '2026-03-20T16:05:03Z'
+lessons:
+- scope: global
+  memory_type: procedural
+  category: tooling
+  summary: When a Databricks notebook writes data under a mounted path such as /mnt/els/rads-projects/short_term/...,
+    the first retrieval path to try locally is the underlying S3 location rather than
+    the Databricks CLI. The Databricks CLI cannot reliably pull data stored behind
+    instance-profile-based DBFS mounts, while the mount-to-S3 translation often works
+    immediately for validation and download.
+  confidence: high
+  impact: high
+  recurrence_hint: repeated
+  observed_in:
+  - projects/2026_INTERNAL_author_metrics/notebooks/spark/author_metrics.py
+  - projects/2026_INTERNAL_author_metrics/scripts/local/build_author_metrics_workbook.py
+  suggested_action:
+    target: agent-core/runbooks/databricks.md
+    change_type: doc_update
+    proposed_eval: mounted-dbfs-s3-first
+  status: captured
+  notes: In this session the export path under the Databricks mount was readable via
+    the corresponding s3://rads-projects/... path, while Databricks CLI access to
+    the mounted DBFS path failed because DBFS API support does not extend to instance-profile-based
+    mounts. Future retrieval attempts should translate the mount path to S3 first.
+  id: LES-2026-03-20-001
+  project_id: 2026_INTERNAL_author_metrics
+  captured_at: '2026-03-20T16:05:03Z'
