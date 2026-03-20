@@ -1,0 +1,31 @@
+id: 2026_INTERNAL_author_metrics
+display_name: "Author metrics extract workbook"
+year: 2026
+iso3: INTERNAL
+short_name: author_metrics
+status: active
+owner: analyst-agent
+created_at: 2026-03-20T15:51:02Z
+ani_stamp: "20260301"
+
+paths:
+  local_root: projects/2026_INTERNAL_author_metrics
+  s3_root: s3://rads-projects/short_term/2026/2026_INTERNAL_author_metrics
+  dbfs_root: /mnt/els/rads-projects/short_term/2026/2026_INTERNAL_author_metrics
+  databricks_workspace_root: /Workspace/rads/projects/2026_INTERNAL_author_metrics
+
+folders:
+  local_output: projects/2026_INTERNAL_author_metrics/output
+  local_tmp: projects/2026_INTERNAL_author_metrics/tmp
+  dbfs_cache: /mnt/els/rads-projects/short_term/2026/2026_INTERNAL_author_metrics/cache
+  s3_output: s3://rads-projects/short_term/2026/2026_INTERNAL_author_metrics/output
+  s3_cache: s3://rads-projects/short_term/2026/2026_INTERNAL_author_metrics/cache
+  s3_exports: s3://rads-projects/short_term/2026/2026_INTERNAL_author_metrics/exports
+  s3_logs: s3://rads-projects/short_term/2026/2026_INTERNAL_author_metrics/logs
+  databricks_notebooks_root: /Workspace/rads/projects/2026_INTERNAL_author_metrics/notebooks
+
+defaults:
+  spark_notebook: projects/2026_INTERNAL_author_metrics/notebooks/spark/author_metrics.py
+  exploratory_notebook_dir: projects/2026_INTERNAL_author_metrics/notebooks/exploratory
+  local_postprocess: projects/2026_INTERNAL_author_metrics/scripts/local/postprocess.py
+  databricks_spark_notebook: /Workspace/rads/projects/2026_INTERNAL_author_metrics/notebooks/spark/author_metrics
