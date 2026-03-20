@@ -1,0 +1,7 @@
+deliverables:
+- path: projects/2026_INTERNAL_retraction/output/*.docx
+  session: session_20260320
+  added_at: '2026-03-20T14:21:08Z'
+- path: projects/2026_INTERNAL_retraction/output/local_or_tables/
+  session: session_20260320
+  added_at: '2026-03-20T14:21:08Z'
