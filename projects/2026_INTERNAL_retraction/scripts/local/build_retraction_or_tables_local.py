@@ -223,6 +223,7 @@ def add_reference_dummies(
     include_unknown_gender: bool,
     use_tertile_pub: bool,
     weight_col: str,
+    include_field_male_interactions: bool = False,
 ) -> tuple[pd.DataFrame, list[str]]:
     d = df.copy()
 
@@ -284,9 +285,15 @@ def add_reference_dummies(
     if include_top_cited:
         feature_cols.append("top_cited_yes")
 
-    field_feature_cols = sorted([c for c in d.columns if c.startswith("field_")])
+    field_feature_cols = sorted([c for c in d.columns if c.startswith("field_") and c != "field_clean"])
     feature_cols += field_feature_cols
     feature_cols.append("male_x_young")
+
+    if include_field_male_interactions:
+        for col in field_feature_cols:
+            int_col = f"male_x_{col}"
+            d[int_col] = d["male"] * d[col]
+            feature_cols.append(int_col)
 
     return d, feature_cols
 
@@ -381,7 +388,21 @@ def build_display_table(
     )
 
 
-def run_single_config(base_df: pd.DataFrame, config: dict, include_unknown_gender: bool, weight_col: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def build_interaction_table(multi_int: dict[str, dict[str, float]]) -> pd.DataFrame:
+    rows: list[tuple[str, str, str]] = []
+    rows.append(("Clinical Medicine", "Ref", ""))
+    for fld, key in FIELD_MAP.items():
+        int_key = f"male_x_{key}"
+        m = multi_int.get(int_key, {})
+        if m and all(k in m for k in ("or", "lcl", "ucl")):
+            or_str, ci_str = _fmt(m["or"], m["lcl"], m["ucl"])
+        else:
+            or_str, ci_str = "", ""
+        rows.append((fld, or_str, ci_str))
+    return pd.DataFrame(rows, columns=["field", "interaction_or", "interaction_95ci"])
+
+
+def run_single_config(base_df: pd.DataFrame, config: dict, include_unknown_gender: bool, weight_col: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     analysis_df = base_df.copy()
     analysis_df["pub_exposure"] = pd.to_numeric(analysis_df[config["exposure_col"]], errors="coerce")
     analysis_df = analysis_df[analysis_df["pub_exposure"].notna()].copy()
@@ -458,7 +479,30 @@ def run_single_config(base_df: pd.DataFrame, config: dict, include_unknown_gende
         use_tertile_pub=config["use_tertile_pub"],
     )
 
-    return all_table, top_table
+    # Interaction models: add field × male interaction terms
+    all_df_int, all_features_int = add_reference_dummies(
+        analysis_df,
+        include_top_cited=True,
+        include_unknown_gender=include_unknown_gender,
+        use_tertile_pub=config["use_tertile_pub"],
+        weight_col=weight_col,
+        include_field_male_interactions=True,
+    )
+    all_multi_int = fit_logit(all_df_int, all_features_int, label_col="label", weight_col=weight_col)
+    all_int_table = build_interaction_table(all_multi_int)
+
+    top_df_int, top_features_int = add_reference_dummies(
+        top_df0,
+        include_top_cited=False,
+        include_unknown_gender=include_unknown_gender,
+        use_tertile_pub=config["use_tertile_pub"],
+        weight_col=weight_col,
+        include_field_male_interactions=True,
+    )
+    top_multi_int = fit_logit(top_df_int, top_features_int, label_col="label", weight_col=weight_col)
+    top_int_table = build_interaction_table(top_multi_int)
+
+    return all_table, top_table, all_int_table, top_int_table
 
 
 def main() -> None:
@@ -487,7 +531,7 @@ def main() -> None:
         cfg_dir = out_base / cfg["name"]
         cfg_dir.mkdir(parents=True, exist_ok=True)
 
-        all_table, top_table = run_single_config(
+        all_table, top_table, all_int_table, top_int_table = run_single_config(
             base_df,
             cfg,
             include_unknown_gender=True,  # Always include unknown gender as explicit category
@@ -511,6 +555,13 @@ def main() -> None:
         print(f"[{cfg['name']}] wrote {all_table_out}")
         print(f"[{cfg['name']}] wrote {top_table_out}")
         print(f"[{cfg['name']}] wrote {combined_out}")
+
+        all_int_out = cfg_dir / "all_authors_field_male_interactions.csv"
+        top_int_out = cfg_dir / "top_cited_field_male_interactions.csv"
+        all_int_table.to_csv(all_int_out, index=False)
+        top_int_table.to_csv(top_int_out, index=False)
+        print(f"[{cfg['name']}] wrote {all_int_out}")
+        print(f"[{cfg['name']}] wrote {top_int_out}")
 
 
 if __name__ == "__main__":
