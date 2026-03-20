@@ -12,6 +12,7 @@ Usage example:
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import glob
 import re
@@ -20,6 +21,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Pt
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -99,7 +101,7 @@ def set_caption(doc: Document, caption_text: str, bold_rpr, nonbold_rpr) -> None
             break
 
 
-def clear_cell(cell, text: str) -> None:
+def clear_cell(cell, text: str, italic: bool = False, indent: bool = False) -> None:
     if not cell.paragraphs:
         p = cell.add_paragraph()
     else:
@@ -110,11 +112,43 @@ def clear_cell(cell, text: str) -> None:
         for run in list(para.runs):
             run._element.getparent().remove(run._element)
 
+    # Apply paragraph indent (w:firstLine 142) to match template category rows.
+    if indent:
+        pPr = p._element.find(qn("w:pPr"))
+        if pPr is None:
+            pPr = OxmlElement("w:pPr")
+            p._element.insert(0, pPr)
+        ind = pPr.find(qn("w:ind"))
+        if ind is None:
+            ind = OxmlElement("w:ind")
+            pPr.append(ind)
+        ind.set(qn("w:firstLine"), "142")
+    else:
+        # Remove any existing indent so header rows have none.
+        pPr = p._element.find(qn("w:pPr"))
+        if pPr is not None:
+            ind = pPr.find(qn("w:ind"))
+            if ind is not None:
+                pPr.remove(ind)
+
     run = p.add_run(text)
     run.bold = False
+    run.italic = italic
     run.font.name = "Times New Roman"
     run.font.size = Pt(11)
 
+
+def insert_table_row_after(table, row_idx: int) -> None:
+    """Insert a duplicate of row_idx immediately after it in the table XML."""
+    ref_tr = table.rows[row_idx]._tr
+    new_tr = copy.deepcopy(ref_tr)
+    ref_tr.addnext(new_tr)
+
+
+def delete_table_row(table, row_idx: int) -> None:
+    """Remove a row from the table by index."""
+    tr = table.rows[row_idx]._tr
+    tr.getparent().remove(tr)
 
 def fill_row(table, row_idx: int, u_or: str, u_ci: str, m_or: str, m_ci: str) -> None:
     row = table.rows[row_idx]
@@ -152,6 +186,23 @@ def build_doc(
     doc = Document(str(template_path))
     table = doc.tables[0]
 
+    is_tertile = "tertile" in pub_label.lower()
+
+    # For tertile mode: insert 3 data rows directly after the template's single
+    # pub-volume row (18), then use row 17 (the empty spacer) as section header.
+    # All original rows > 18 shift down by 3.
+    PUB_ROW = 18
+    if is_tertile:
+        for _ in range(3):
+            insert_table_row_after(table, PUB_ROW)
+        pub_shift = 3
+    else:
+        pub_shift = 0
+
+    def S(r: int) -> int:
+        """Shift original template row index for rows inserted after PUB_ROW."""
+        return r + pub_shift if r > PUB_ROW else r
+
     mappings = [
         (4, "Gender", "Men"),
         (9, "Age career (year of first publication)", "1992-2001"),
@@ -159,43 +210,55 @@ def build_doc(
         (11, "Age career (year of first publication)", ">=2012"),
         (15, "Income level", "All other income levels"),
         (16, "Income level", "Unknown"),
-        (18, pub_label, "Per +1 unit"),
-        (25, "Scientific field", "Agriculture, Fisheries & Forestry"),
-        (26, "Scientific field", "Biology"),
-        (27, "Scientific field", "Biomedical Research"),
-        (28, "Scientific field", "Built Environment & Design"),
-        (29, "Scientific field", "Chemistry"),
-        (31, "Scientific field", "Communication & Textual Studies"),
-        (32, "Scientific field", "Earth & Environmental Sciences"),
-        (33, "Scientific field", "Economics & Business"),
-        (34, "Scientific field", "Enabling & Strategic Technologies"),
-        (35, "Scientific field", "Engineering"),
-        (36, "Scientific field", "Historical Studies"),
-        (37, "Scientific field", "Information & Communication Technologies"),
-        (38, "Scientific field", "Mathematics & Statistics"),
-        (39, "Scientific field", "Philosophy & Theology"),
-        (40, "Scientific field", "Physics & Astronomy"),
-        (41, "Scientific field", "Psychology & Cognitive Sciences"),
-        (42, "Scientific field", "Public Health & Health Services"),
-        (43, "Scientific field", "Social Sciences"),
-        (44, "Scientific field", "Visual & Performing Arts"),
-        (47, "Interaction", "Men in youngest cohort>=2012"),
+        (S(25), "Scientific field", "Agriculture, Fisheries & Forestry"),
+        (S(26), "Scientific field", "Biology"),
+        (S(27), "Scientific field", "Biomedical Research"),
+        (S(28), "Scientific field", "Built Environment & Design"),
+        (S(29), "Scientific field", "Chemistry"),
+        (S(31), "Scientific field", "Communication & Textual Studies"),
+        (S(32), "Scientific field", "Earth & Environmental Sciences"),
+        (S(33), "Scientific field", "Economics & Business"),
+        (S(34), "Scientific field", "Enabling & Strategic Technologies"),
+        (S(35), "Scientific field", "Engineering"),
+        (S(36), "Scientific field", "Historical Studies"),
+        (S(37), "Scientific field", "Information & Communication Technologies"),
+        (S(38), "Scientific field", "Mathematics & Statistics"),
+        (S(39), "Scientific field", "Philosophy & Theology"),
+        (S(40), "Scientific field", "Physics & Astronomy"),
+        (S(41), "Scientific field", "Psychology & Cognitive Sciences"),
+        (S(42), "Scientific field", "Public Health & Health Services"),
+        (S(43), "Scientific field", "Social Sciences"),
+        (S(44), "Scientific field", "Visual & Performing Arts"),
+        (S(47), "Interaction", "Men in youngest cohort>=2012"),
     ]
     if include_top_cited_row:
-        mappings.insert(7, (22, "Top-cited status", "Yes"))
+        mappings.insert(7, (S(22), "Top-cited status", "Yes"))
 
     for row_idx, var, lvl in mappings:
         u_or, u_ci, m_or, m_ci = get_vals(data, var, lvl)
         fill_row(table, row_idx, u_or, u_ci, m_or, m_ci)
 
-    # Clear Top-cited status reference row when not applicable (top-cited cohort only)
-    if not include_top_cited_row:
-        # Row 21 is the "Top-cited status / No" reference row in the template
-        for cell in table.rows[21].cells:
-            clear_cell(cell, "")
+    # Publication volume rows
+    if is_tertile:
+        # Row 17 stays as empty spacer (not touched).
+        # Row 18 becomes section header only (no data values) — italic.
+        clear_cell(table.rows[PUB_ROW].cells[0], pub_label, italic=True)
+        # Rows 19, 20, 21 are the 3 inserted tertile data rows — indented.
+        for i, lvl in enumerate(["Tertile 1 (lowest)", "Tertile 2", "Tertile 3 (highest)"]):
+            r = PUB_ROW + 1 + i
+            clear_cell(table.rows[r].cells[0], lvl, indent=True)
+            u_or, u_ci, m_or, m_ci = get_vals(data, pub_label, lvl)
+            fill_row(table, r, u_or, u_ci, m_or, m_ci)
+    else:
+        u_or, u_ci, m_or, m_ci = get_vals(data, pub_label, "Per +1 unit")
+        fill_row(table, PUB_ROW, u_or, u_ci, m_or, m_ci)
+        clear_cell(table.rows[PUB_ROW].cells[0], pub_label)
 
-    # Keep template row but align label text to chosen exposure definition.
-    clear_cell(table.rows[18].cells[0], pub_label)
+    # Remove entire Top-cited status section when not applicable (top-cited cohort).
+    # Delete in reverse order to keep indices stable: spacer after, Yes, No/Ref, header.
+    if not include_top_cited_row:
+        for blank_row in sorted([S(20), S(21), S(22), S(23)], reverse=True):
+            delete_table_row(table, blank_row)
 
     set_caption(doc, caption, bold_rpr, nonbold_rpr)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -221,26 +284,30 @@ def main() -> None:
     base = Path(args.csv_base)
     out_dir = Path(args.output_dir)
 
-    all_data = read_or_rows(str(base / "all_authors_or_table_csv" / "*.csv"))
-    top_data = read_or_rows(str(base / "top_cited_or_table_csv" / "*.csv"))
+    all_data = read_or_rows(str(base / "all_authors_or_table.csv"))
+    top_data = read_or_rows(str(base / "top_cited_or_table.csv"))
     pub_label = infer_pub_label(all_data)
 
-    if "paper-year" in pub_label.lower():
+    if "tertile" in pub_label.lower():
+        pub_text = "Publication volume is categorised into tertiles (T1 lowest, T3 highest)."
+    elif "paper-year" in pub_label.lower():
         pub_text = "Publication volume is modelled as a continuous variable (OR per additional active publication year)."
     else:
         pub_text = "Publication volume is modelled as a continuous variable (OR per additional paper)."
 
     suffix = f"_{args.suffix}" if args.suffix else ""
 
+    pub_ref = "; Tertile 1 (lowest)" if "tertile" in pub_label.lower() else ""
+
     all_caption = (
         "Table XXX. Univariable and multivariable odds ratios (OR) and 95% confidence intervals (CI) "
         "from logistic regression models estimating the probability of having >=1 retraction, among all authors. "
-        f"{pub_text} Reference categories: Women; <1992; High income level; No top-cited status; Clinical Medicine."
+        f"{pub_text} Reference categories: Women; <1992; High income level; No top-cited status{pub_ref}; Clinical Medicine."
     )
     top_caption = (
         "Table XXX. Univariable and multivariable odds ratios (OR) and 95% confidence intervals (CI) "
         "from logistic regression models estimating the probability of having >=1 retraction, among top-cited authors. "
-        f"{pub_text} Reference categories: Women; <1992; High income level; Clinical Medicine."
+        f"{pub_text} Reference categories: Women; <1992; High income level{pub_ref}; Clinical Medicine."
     )
 
     build_doc(
