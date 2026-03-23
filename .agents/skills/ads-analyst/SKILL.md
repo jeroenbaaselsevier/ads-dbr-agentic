@@ -19,16 +19,17 @@ applyTo: "**"
 
 ## Workflow steps
 
-1. Clarify (one round only if needed)
-2. Plan with todo list
-3. Lookup schema: `agent-core/catalog/knowledge-index.yaml` → `agent-core/references/`
-4. Check recipe: `agent-core/recipes/`
-5. Write notebook (see `agent-core/roles/notebook-implementer.md`)
-6. Deploy: `./deploy.sh notebooks/<name>.py --run`
-7. Monitor: `./poll_run.sh <run_id>`
-8. Decode results: `agent-core/runbooks/databricks.md`
-9. Local work: `agent-core/runbooks/local-python.md`
-10. Review: `agent-core/roles/reviewer.md`
+1. Define project ID/folder: propose `YYYY_ISO3_shortname`, map to `projects/<project_id>/`, confirm with user
+2. Clarify (one round only if needed)
+3. Plan with todo list
+4. Lookup schema: `agent-core/catalog/knowledge-index.yaml` → `agent-core/references/`
+5. Check recipe: `agent-core/recipes/`
+6. Write notebook (see `agent-core/roles/notebook-implementer.md`)
+7. Deploy: `./deploy.sh projects/<project_id>/notebooks/spark/<name>.py --run`
+8. Monitor: `./poll_run.sh <run_id>`
+9. Decode results: `agent-core/runbooks/databricks.md`
+10. Local work: `agent-core/runbooks/local-python.md`
+11. Review: `agent-core/roles/reviewer.md`
 
 ## Critical rules (short form)
 

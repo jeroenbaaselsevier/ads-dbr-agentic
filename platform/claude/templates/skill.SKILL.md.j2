@@ -28,16 +28,17 @@ Also check the library mirror:
 
 ## Workflow
 
-1. **Clarify** — one round only if needed
-2. **Plan** — use todo list
-3. **Schema lookup** — `agent-core/catalog/knowledge-index.yaml` → relevant `agent-core/references/*.md`
-4. **Recipe check** — `agent-core/recipes/` for common patterns
-5. **Generate notebook** — mandatory boilerplate from `agent-core/roles/notebook-implementer.md`
-6. **Deploy** — `./deploy.sh notebooks/<name>.py --run`
-7. **Monitor** — `./poll_run.sh <run_id>`
-8. **Decode results** — `agent-core/runbooks/databricks.md`
-9. **Local post-processing** — `agent-core/runbooks/local-python.md`
-10. **Review** — run `agent-core/roles/reviewer.md` checklist
+1. **Define project ID/folder** — propose `YYYY_ISO3_shortname`, map to `projects/<project_id>/`, confirm with user
+2. **Clarify** — one round only if needed
+3. **Plan** — use todo list
+4. **Schema lookup** — `agent-core/catalog/knowledge-index.yaml` → relevant `agent-core/references/*.md`
+5. **Recipe check** — `agent-core/recipes/` for common patterns
+6. **Generate notebook** — mandatory boilerplate from `agent-core/roles/notebook-implementer.md`
+7. **Deploy** — `./deploy.sh projects/<project_id>/notebooks/spark/<name>.py --run`
+8. **Monitor** — `./poll_run.sh <run_id>`
+9. **Decode results** — `agent-core/runbooks/databricks.md`
+10. **Local post-processing** — `agent-core/runbooks/local-python.md`
+11. **Review** — run `agent-core/roles/reviewer.md` checklist
 
 ## Reference files
 

@@ -45,10 +45,20 @@ Also verify the library mirror exists:
 
 ## Workflow
 
-### 1. Clarify (if needed)
+### 1. Define project folder name (required for new work)
+Before implementation, propose a project ID using `YYYY_ISO3_shortname`, map
+it to `projects/<project_id>/`, and confirm it with the user. If the project
+already exists, activate it instead of creating a new one.
+
+Example bootstrap:
+```bash
+python scripts/init_project.py --year {{ year }} --iso3 <ISO3|INTERNAL> --short-name <slug> --display-name "<name>"
+```
+
+### 2. Clarify (if needed)
 Ask ONE round of clarifying questions only if the question is too vague to proceed.
 
-### 2. Plan
+### 3. Plan
 Use `manage_todo_list` to outline: data load → transforms → aggregation → output.
 
 For **larger tasks** (multiple notebooks, several analytical questions, or both
@@ -66,12 +76,12 @@ Spark and local post-processing), use subagent orchestration
 Subagent prompts must be **fully self-contained** (no shared state):
 include all paths, column names, join keys, and expected output format.
 
-### 3. Look up schemas and join patterns
+### 4. Look up schemas and join patterns
 Check `agent-core/catalog/knowledge-index.yaml` for the relevant reference
 file, then read it. Check `agent-core/recipes/` for common patterns.
 For library function signatures, read `agent-core/references/library.md`.
 
-### 4. Generate the notebook
+### 5. Generate the notebook
 Store **all code** under `projects/<project_id>/` for new work (see rule 6 in
 `core-rules.md`), or `notebooks/` for legacy single-file analyses.
 
@@ -94,25 +104,25 @@ cache_folder     = os.path.join(str_path_project, 'cache')
 - Wrap every expensive intermediate step in `dataframe_functions.df_cached()`.
 - Use `dataframe_functions.export_df_csv()` when the user wants a downloadable file.
 
-### 5. Deploy and run
+### 6. Deploy and run
 ```bash
 ./deploy.sh projects/<project_id>/notebooks/spark/<name>.py --run
 ```
 Capture the `run_id`. See `agent-core/runbooks/databricks.md` for full procedure.
 
-### 6. Monitor
+### 7. Monitor
 Use `./poll_run.sh <run_id>` and wait for a terminal state
 (`TERMINATED`, `INTERNAL_ERROR`, or `SKIPPED`).
 On `FAILED`: diagnose, fix, re-deploy (up to 2 attempts before asking the user).
 
-### 7. Fetch and present results
+### 8. Fetch and present results
 See `agent-core/runbooks/databricks.md` for the decode procedure.
 
-### 8. Local post-processing (optional)
+### 9. Local post-processing (optional)
 See `agent-core/runbooks/local-python.md` and `agent-core/roles/results-packager.md`.
 
-### 9. Reviewer checklist
+### 10. Reviewer checklist
 Run through `agent-core/roles/reviewer.md` before presenting to the user.
 
-### 10. Session closeout
+### 11. Session closeout
 Run `python scripts/closeout_project.py` to finalize the session. See rule 20.

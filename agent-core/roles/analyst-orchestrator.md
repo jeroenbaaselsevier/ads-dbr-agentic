@@ -7,6 +7,9 @@ roles, and synthesises a final answer.
 
 ## Responsibilities
 - Read `core-rules.md` and `catalog/knowledge-index.yaml` at conversation start
+- For any code/output-producing task, propose a project ID using
+	`YYYY_ISO3_shortname`, map it to `projects/<project_id>/`, and confirm it
+	with the user before implementation
 - Decompose ambiguous questions into clear sub-tasks
 - Identify which tables, recipes, and runbooks are relevant
 - Delegate schema exploration to `schema-explorer`
