@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pandas as pd
 import pyarrow.dataset as ds
@@ -35,8 +36,11 @@ def parse_args() -> argparse.Namespace:
 
 def load_parquet(input_path: str) -> pd.DataFrame:
     if input_path.startswith('s3://'):
-        s3 = pafs.S3FileSystem(region='eu-west-1')
-        dataset = ds.dataset(input_path, filesystem=s3, format='parquet')
+        parsed = urlparse(input_path)
+        bucket = parsed.netloc
+        key = parsed.path.lstrip('/')
+        s3 = pafs.S3FileSystem(region='us-east-1')
+        dataset = ds.dataset(f'{bucket}/{key}', filesystem=s3, format='parquet')
     else:
         dataset = ds.dataset(input_path, format='parquet')
     return dataset.to_table().to_pandas()
@@ -83,6 +87,8 @@ def build_summary(df_raw: pd.DataFrame) -> pd.DataFrame:
         'fwci_4y',
         'fwci_4y_percentile',
         'is_top10_fwci_4y',
+        'best_citescore_percentile',
+        'is_top10_journal',
         'best_citescore_percentile_2024',
         'is_top10_journal_2024',
         'citescore_2024',
@@ -97,6 +103,9 @@ def build_summary(df_raw: pd.DataFrame) -> pd.DataFrame:
     df_raw['auid'] = pd.to_numeric(df_raw['auid'], errors='raise').astype('Int64')
     df_raw['eid'] = pd.to_numeric(df_raw['eid'], errors='raise').astype('Int64')
 
+    best_pct_col = 'best_citescore_percentile' if 'best_citescore_percentile' in df_raw.columns else 'best_citescore_percentile_2024'
+    top_journal_col = 'is_top10_journal' if 'is_top10_journal' in df_raw.columns else 'is_top10_journal_2024'
+
     df_dedup = (
         df_raw
         .sort_values(['nr', 'eid', 'auid'])
@@ -110,11 +119,29 @@ def build_summary(df_raw: pd.DataFrame) -> pd.DataFrame:
 
     for nr, df_group in metrics:
         df_meta = base_meta.get_group(nr)
-        journal_metric_count = df_group['best_citescore_percentile_2024'].notna().sum()
+
+        # Deduplicate by srcid within this Nr group for cumulative journal metrics
+        df_unique_journals = df_group.drop_duplicates(subset=['srcid'])
+
+        journal_metric_count = df_group[best_pct_col].notna().sum()
         if journal_metric_count == 0:
             top_journal_value = '-'
         else:
-            top_journal_value = round(float(df_group['is_top10_journal_2024'].fillna(0).mean() * 100.0), 1)
+            top_journal_value = round(float(df_group[top_journal_col].fillna(0).mean() * 100.0), 1)
+
+        # Scholary Output should count all unique papers in this Nr group.
+        n_total_all = int(df_group['eid'].nunique())
+
+        # Top citation %: ignore papers with zero citations in percentile computation.
+        df_cited = df_group[df_group['citations_nowindow'].fillna(0) > 0]
+        n_total_cited = int(df_cited['eid'].nunique())
+        n_top_cited = int(
+            df_cited[
+                (df_cited['fwci_4y'].fillna(0) > 0) &
+                (df_cited['is_top10_fwci_4y'] == 1)
+            ]['eid'].nunique()
+        )
+        top_cited_pct = round(n_top_cited / n_total_cited * 100.0, 1) if n_total_cited > 0 else 0.0
 
         summary_rows.append({
             'Scopus ID': join_unique(df_meta['auid'].astype('Int64').astype(str)),
@@ -122,14 +149,14 @@ def build_summary(df_raw: pd.DataFrame) -> pd.DataFrame:
             'Last Name': join_unique_names(df_meta['last_name']),
             'First Name': join_unique_names(df_meta['first_name']),
             'First Year Publication': int(df_group['sort_year'].min()) if df_group['sort_year'].notna().any() else pd.NA,
-            'Scholary Output': int(df_group['eid'].nunique()),
+            'Scholary Output': n_total_all,
             'Citations': int(round(df_group['citations_nowindow'].fillna(0).sum())),
-            'Top citation percentiles (top 10 %)': round(float(df_group['is_top10_fwci_4y'].fillna(0).mean() * 100.0), 1),
+            'Top citation percentiles (top 10 %)': top_cited_pct,
             'Top journal percentiles (Top 10%)': top_journal_value,
             'h-index': compute_h_index(df_group['citations_nowindow']),
             'International Collaboration': round(float(df_group['collaboration_level'].eq('INTERNATIONAL').mean() * 100.0), 1),
-            'Cumulative SNIP (2024)': round(float(df_group['snip_2024'].fillna(0).sum()), 2),
-            'Cumulative CiteScore (2024)': round(float(df_group['citescore_2024'].fillna(0).sum()), 1),
+            'Cumulative SNIP (2024)': round(float(df_unique_journals['snip_2024'].fillna(0).sum()), 2),
+            'Cumulative CiteScore (2024)': round(float(df_unique_journals['citescore_2024'].fillna(0).sum()), 1),
         })
 
     return pd.DataFrame(summary_rows, columns=SUMMARY_COLUMNS).sort_values('Nr.').reset_index(drop=True)
@@ -149,6 +176,8 @@ def build_raw_sheet(df_raw: pd.DataFrame) -> pd.DataFrame:
         'fwci_4y',
         'fwci_4y_percentile',
         'is_top10_fwci_4y',
+        'best_citescore_percentile',
+        'is_top10_journal',
         'best_citescore_percentile_2024',
         'is_top10_journal_2024',
         'citescore_2024',

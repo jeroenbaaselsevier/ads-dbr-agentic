@@ -3,6 +3,7 @@
 # COMMAND ----------
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
+from pyspark.sql import Window
 import os
 import sys
 
@@ -74,7 +75,8 @@ df_author_eids = (
     .join(df_authors, ['auid'], 'inner')
 )
 
-print(f'Author-eid rows after ANI filter: {df_author_eids.count()}')
+df_cached = df_author_eids.cache()
+print(f'Author-eid rows after ANI filter: {df_cached.count()}')
 
 # COMMAND ----------
 df_fwci = (
@@ -102,19 +104,64 @@ df_collab = (
 # COMMAND ----------
 df_source = snapshot_functions.source.get_table(snapshot=SOURCE_SNAPSHOT)
 
-df_source_citescore = (
+df_source_citescore_by_year = (
+    df_source
+    .select(F.col('id').cast('long').alias('srcid'), F.explode_outer('calculations').alias('calc'))
+    .filter(F.col('calc.status') == F.lit('Complete'))
+    .filter(F.col('calc.csMetric').isNotNull())
+    .select(
+        'srcid',
+        F.col('calc.year').cast('int').alias('calc_year'),
+        F.col('calc.csMetric.csCiteScore').cast('double').alias('citescore_selected_year'),
+        F.explode_outer('calc.csMetric.csSubjectCategory').alias('subject_category'),
+    )
+    .groupBy('srcid', 'calc_year', 'citescore_selected_year')
+    .agg(
+        F.max(F.col('subject_category.csPercentile').cast('double')).alias('best_citescore_percentile'),
+    )
+)
+
+df_paper_journal_candidates = (
+    df_cached
+    .select('auid', 'eid', 'sort_year', 'srcid')
+    .join(df_source_citescore_by_year, ['srcid'], 'left')
+    .filter(F.col('calc_year').isNull() | (F.col('calc_year') >= F.col('sort_year')))
+    .withColumn(
+        'year_gap',
+        F.when(F.col('calc_year').isNull(), F.lit(9999)).otherwise(F.col('calc_year') - F.col('sort_year')),
+    )
+    .withColumn('has_calc', F.when(F.col('calc_year').isNull(), F.lit(0)).otherwise(F.lit(1)))
+)
+
+paper_rank_window = Window.partitionBy('auid', 'eid').orderBy(
+    F.col('has_calc').desc(),
+    F.col('year_gap').asc(),
+    F.col('calc_year').asc(),
+)
+
+df_paper_journal = (
+    df_paper_journal_candidates
+    .withColumn('rn', F.row_number().over(paper_rank_window))
+    .filter(F.col('rn') == F.lit(1))
+    .select(
+        'auid',
+        'eid',
+        F.col('best_citescore_percentile'),
+    )
+    .withColumn(
+        'is_top10_journal',
+        F.when(F.col('best_citescore_percentile') >= F.lit(90.0), F.lit(1)).otherwise(F.lit(0)),
+    )
+)
+
+df_source_citescore_2024 = (
     df_source
     .select(F.col('id').cast('long').alias('srcid'), F.explode_outer('calculations').alias('calc'))
     .filter(F.col('calc.year') == F.lit(2024))
     .filter(F.col('calc.csMetric').isNotNull())
-    .select(
-        'srcid',
-        F.col('calc.csMetric.csCiteScore').cast('double').alias('citescore_2024'),
-        F.explode_outer('calc.csMetric.csSubjectCategory').alias('subject_category'),
-    )
-    .groupBy('srcid', 'citescore_2024')
+    .groupBy('srcid')
     .agg(
-        F.max(F.col('subject_category.csPercentile').cast('double')).alias('best_citescore_percentile_2024'),
+        F.max(F.col('calc.csMetric.csCiteScore').cast('double')).alias('citescore_2024'),
     )
 )
 
@@ -129,21 +176,14 @@ df_source_snip = (
     )
 )
 
-df_source_2024 = (
-    df_source_citescore
-    .join(df_source_snip, ['srcid'], 'full')
-    .withColumn(
-        'is_top10_journal_2024',
-        F.when(F.col('best_citescore_percentile_2024') >= F.lit(90.0), F.lit(1)).otherwise(F.lit(0)),
-    )
-)
-
 # COMMAND ----------
 df_result = (
-    df_author_eids
+    df_cached
     .join(df_fwci, ['eid'], 'left')
     .join(df_collab, ['eid'], 'left')
-    .join(df_source_2024, ['srcid'], 'left')
+    .join(df_paper_journal, ['auid', 'eid'], 'left')
+    .join(df_source_citescore_2024, ['srcid'], 'left')
+    .join(df_source_snip, ['srcid'], 'left')
     .select(
         'nr',
         'auid',
@@ -157,8 +197,8 @@ df_result = (
         'fwci_4y',
         'fwci_4y_percentile',
         'is_top10_fwci_4y',
-        'best_citescore_percentile_2024',
-        'is_top10_journal_2024',
+        'best_citescore_percentile',
+        'is_top10_journal',
         'citescore_2024',
         'snip_2024',
         'collaboration_level',

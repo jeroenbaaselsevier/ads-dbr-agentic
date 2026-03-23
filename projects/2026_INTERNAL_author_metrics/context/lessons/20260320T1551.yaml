@@ -1,6 +1,6 @@
 session_id: 20260320T1551
 project_id: 2026_INTERNAL_author_metrics
-captured_at: '2026-03-20T16:05:03Z'
+captured_at: '2026-03-20T16:25:52Z'
 lessons:
 - scope: global
   memory_type: procedural
@@ -28,3 +28,35 @@ lessons:
   id: LES-2026-03-20-001
   project_id: 2026_INTERNAL_author_metrics
   captured_at: '2026-03-20T16:05:03Z'
+- scope: global
+  memory_type: semantic
+  category: schema
+  summary: 'Top journal percentile (Top 10%) for a paper is NOT computed using a fixed
+    CiteScore year (e.g. 2024 for all papers). The correct rule is: for each (srcid,
+    sort_year) pair, look up the CiteScore calculation whose year matches the paper''s
+    sort_year and whose status is ''Complete''. From that calculation''s csSubjectCategory
+    array, take the best (max) csPercentile across all ASJC categories. If no ''Complete''
+    calculation exists for the paper''s sort_year, fall forward to the earliest available
+    future year with a ''Complete'' calculation (never fall back to a past year).
+    Flag the paper as top-10% journal if best_percentile >= 90. This matches SciVal''s
+    per-paper journal-level percentile behaviour and is the method needed to reproduce
+    ''Top journal percentiles (Top 10%)'' portfolio metrics.'
+  confidence: high
+  impact: high
+  recurrence_hint: systematic
+  observed_in:
+  - projects/2026_INTERNAL_author_metrics/notebooks/spark/author_metrics.py
+  - agent-core/references/source.md
+  suggested_action:
+    target: agent-core/references/source.md
+    change_type: doc_update
+    proposed_eval: top-journal-pct-per-paper-year
+  status: captured
+  notes: Initial implementation incorrectly joined a single 2024 CiteScore to all
+    papers regardless of their sort_year. The correct join is srcid + sort_year, with
+    forward-fill to earliest future Complete year when the paper's own year has no
+    Complete calculation. Past years must not be used as fallback. See csSubjectCategory[].csPercentile
+    in the source profile schema.
+  id: LES-2026-03-20-002
+  project_id: 2026_INTERNAL_author_metrics
+  captured_at: '2026-03-20T16:25:52Z'
