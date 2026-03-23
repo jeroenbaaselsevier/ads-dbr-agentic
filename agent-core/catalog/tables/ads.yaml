@@ -50,3 +50,18 @@ references:
 validators:
   - use_left_join_to_ani
   - note_ads_broader_than_nopp
+  - note_research_levels_best_in_physical_life_sciences
+
+research_levels:
+  model: basic_applied_classifier (BAC v0.31)
+  method: title + abstract + cited-reference features (article-level classifier)
+  label_map:
+    0: Clinical observation / Applied technology
+    1: Clinical mix / Engineering-technological mix
+    2: Clinical investigation / Applied research
+    3: Basic research / Basic scientific research
+  caveats:
+    - Works best in Physical and Life Sciences
+    - Less effective in Social Sciences
+    - Interpret cross-field comparisons with care
+  reference_doc: agent-core/references/ads-derived/publication/Article_Research_Levels-reference.md

@@ -224,7 +224,10 @@ tables:
       FWCI (all/no-self-cit, 4y/5y/no-window), citation percentiles
       (total, ASJC27, ASJC334), collaboration levels, H-index, gender,
       altmetrics, patent links, usage/FWVI, funding, policy citations.
-      Access: snapshot_functions.ads.publication.get_table('TableName').
+      Research Levels (BAC) classify articles on a 0-3 applied-to-basic scale
+      using title/abstract/cited references; strongest in Physical/Life
+      Sciences and less effective in Social Sciences. Access:
+      snapshot_functions.ads.publication.get_table('TableName').
 
 library:
   reference: agent-core/references/library.md
