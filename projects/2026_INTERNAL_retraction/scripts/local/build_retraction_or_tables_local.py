@@ -289,12 +289,9 @@ def add_reference_dummies(
     field_feature_cols = sorted([c for c in d.columns if c.startswith("field_") and c != "field_clean"])
     feature_cols += field_feature_cols
 
-    # Male × young career interaction (always added when include_all_interactions;
-    # also added in the legacy include_field_male_interactions path)
-    if include_all_interactions or include_field_male_interactions or True:
-        # We always compute male_x_young — controlled by build_display_table whether it is shown
-        pass
-    feature_cols.append("male_x_young")
+    # Male × young career interaction — only added when interactions are requested
+    if include_all_interactions or include_field_male_interactions:
+        feature_cols.append("male_x_young")
 
     if include_field_male_interactions or include_all_interactions:
         for col in field_feature_cols:
@@ -408,22 +405,74 @@ def build_display_table(
 
     if include_interactions:
         add_row("Interaction", "Men in youngest cohort (>=2012)", uni_key="male_x_young", multi_key="male_x_young")
-        add_row("Interaction", "Men in all other income levels", multi_key="male_x_income_other")
-        add_row("Interaction", "Men in unknown income", multi_key="male_x_income_unknown")
+        add_row("Interaction", "Men in all other income levels", uni_key="male_x_income_other", multi_key="male_x_income_other")
+        add_row("Interaction", "Men in unknown income", uni_key="male_x_income_unknown", multi_key="male_x_income_unknown")
         if use_tertile_pub:
-            add_row("Interaction", "Men in Tertile 2 (pub volume)", multi_key="male_x_pub_t2")
-            add_row("Interaction", "Men in Tertile 3 (pub volume)", multi_key="male_x_pub_t3")
+            add_row("Interaction", "Men in Tertile 2 (pub volume)", uni_key="male_x_pub_t2", multi_key="male_x_pub_t2")
+            add_row("Interaction", "Men in Tertile 3 (pub volume)", uni_key="male_x_pub_t3", multi_key="male_x_pub_t3")
         else:
-            add_row("Interaction", "Men × publication volume", multi_key="male_x_pub")
+            add_row("Interaction", "Men × publication volume", uni_key="male_x_pub", multi_key="male_x_pub")
         if include_top_cited:
-            add_row("Interaction", "Men × top-cited", multi_key="male_x_top_cited")
+            add_row("Interaction", "Men × top-cited", uni_key="male_x_top_cited", multi_key="male_x_top_cited")
         for fld, key in FIELD_MAP.items():
-            add_row("Interaction", f"Men × {fld}", multi_key=f"male_x_{key}")
+            add_row("Interaction", f"Men × {fld}", uni_key=f"male_x_{key}", multi_key=f"male_x_{key}")
 
     return pd.DataFrame(
         rows,
         columns=["variable", "level", "univ_or", "univ_95ci", "multiv_or", "multiv_95ci"],
     )
+
+
+def compute_counts(
+    df: pd.DataFrame,
+    publication_label: str,
+    use_tertile_pub: bool,
+    include_top_cited: bool,
+    include_unknown_gender: bool,
+    label_col: str = "label",
+    weight_col: str = "n_obs",
+) -> pd.DataFrame:
+    """Return (variable, level, n, n_ret) counts from the raw grouped DataFrame."""
+
+    def _c(mask: pd.Series) -> tuple[int, int]:
+        sub = df[mask]
+        n = int(sub[weight_col].sum())
+        n_ret = int((sub[label_col] * sub[weight_col]).sum())
+        return n, n_ret
+
+    rows: list[tuple] = []
+
+    g = df["gender_clean"].fillna("unknown")
+    for raw, lvl in [("female", "Women"), ("male", "Men")]:
+        rows.append(("Gender", lvl, *_c(g == raw)))
+    if include_unknown_gender:
+        rows.append(("Gender", "Unknown", *_c(g == "unknown")))
+
+    c = df["career_age_clean"].fillna("unknown")
+    for lvl in ["<1992", "1992-2001", "2002-2011", ">=2012"]:
+        rows.append(("Age career (year of first publication)", lvl, *_c(c == lvl)))
+
+    inc = df["income_clean"].fillna("unknown")
+    rows.append(("Income level", "High income level", *_c(inc.str.lower() == "high income")))
+    rows.append(("Income level", "All other income levels", *_c(inc == "All Other Income Levels")))
+    rows.append(("Income level", "Unknown", *_c(inc.str.lower() == "unknown")))
+
+    # Pub volume: show total n for the single continuous row; tertile rows skipped
+    # (tertile thresholds are only available in the encoded df)
+    if not use_tertile_pub:
+        n_total, n_ret_total = _c(pd.Series(True, index=df.index))
+        rows.append((publication_label, "Per +1 unit", n_total, n_ret_total))
+
+    if include_top_cited:
+        rows.append(("Top-cited status", "No", *_c(df["top_cited_yes"] == 0.0)))
+        rows.append(("Top-cited status", "Yes", *_c(df["top_cited_yes"] == 1.0)))
+
+    fld = df["field_clean"].fillna("unknown")
+    rows.append(("Scientific field", "Clinical Medicine", *_c(fld == "Clinical Medicine")))
+    for lvl in FIELD_MAP.keys():
+        rows.append(("Scientific field", lvl, *_c(fld == lvl)))
+
+    return pd.DataFrame(rows, columns=["variable", "level", "n", "n_ret"])
 
 
 def build_interaction_table(multi_int: dict[str, dict[str, float]]) -> pd.DataFrame:
@@ -440,7 +489,12 @@ def build_interaction_table(multi_int: dict[str, dict[str, float]]) -> pd.DataFr
     return pd.DataFrame(rows, columns=["field", "interaction_or", "interaction_95ci"])
 
 
-def build_combined_csv(all_tbl: pd.DataFrame, top_tbl: pd.DataFrame) -> pd.DataFrame:
+def build_combined_csv(
+    all_tbl: pd.DataFrame,
+    top_tbl: pd.DataFrame,
+    all_counts: pd.DataFrame | None = None,
+    top_counts: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     """Merge all-authors and top-cited tables into a 6-column combined CSV.
 
     Columns: variable, level,
@@ -486,7 +540,22 @@ def build_combined_csv(all_tbl: pd.DataFrame, top_tbl: pd.DataFrame) -> pd.DataF
                 top_univ=_merge_or_ci(row.get("univ_or", ""), row.get("univ_95ci", "")),
                 top_multiv=_merge_or_ci(row.get("multiv_or", ""), row.get("multiv_95ci", "")),
             ))
-    return pd.DataFrame(combined_rows, columns=["variable", "level", "all_univ", "all_multiv", "top_univ", "top_multiv"])
+    # Merge counts if provided
+    combined = pd.DataFrame(combined_rows, columns=["variable", "level", "all_univ", "all_multiv", "top_univ", "top_multiv"])
+    if all_counts is not None:
+        all_counts_r = all_counts.rename(columns={"n": "all_n", "n_ret": "all_n_ret"})
+        combined = combined.merge(all_counts_r[["variable", "level", "all_n", "all_n_ret"]], on=["variable", "level"], how="left")
+    else:
+        combined["all_n"] = pd.NA
+        combined["all_n_ret"] = pd.NA
+    if top_counts is not None:
+        top_counts_r = top_counts.rename(columns={"n": "top_n", "n_ret": "top_n_ret"})
+        combined = combined.merge(top_counts_r[["variable", "level", "top_n", "top_n_ret"]], on=["variable", "level"], how="left")
+    else:
+        combined["top_n"] = pd.NA
+        combined["top_n_ret"] = pd.NA
+    col_order = ["variable", "level", "all_n", "all_n_ret", "all_univ", "all_multiv", "top_n", "top_n_ret", "top_univ", "top_multiv"]
+    return combined[col_order]
 
 
 def run_single_config(base_df: pd.DataFrame, config: dict, include_unknown_gender: bool, weight_col: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -507,7 +576,6 @@ def run_single_config(base_df: pd.DataFrame, config: dict, include_unknown_gende
         "career_1992_2001": ["career_1992_2001", "career_2002_2011", "career_ge2012"],
         "income_other": ["income_other", "income_unknown"],
         "top_cited_yes": ["top_cited_yes"],
-        "male_x_young": ["male_x_young"],
     }
     if config["use_tertile_pub"]:
         all_univ_sets["pub_t2"] = ["pub_t2", "pub_t3"]
@@ -544,7 +612,6 @@ def run_single_config(base_df: pd.DataFrame, config: dict, include_unknown_gende
         "male": ["male"] + (["gender_unknown"] if include_unknown_gender else []),
         "career_1992_2001": ["career_1992_2001", "career_2002_2011", "career_ge2012"],
         "income_other": ["income_other", "income_unknown"],
-        "male_x_young": ["male_x_young"],
     }
     if config["use_tertile_pub"]:
         top_univ_sets["pub_t2"] = ["pub_t2", "pub_t3"]
@@ -578,8 +645,15 @@ def run_single_config(base_df: pd.DataFrame, config: dict, include_unknown_gende
         include_all_interactions=True,
     )
     all_multi_fi = fit_logit(all_df_fi, all_features_fi, label_col="label", weight_col=weight_col)
+
+    # Univariable estimates for every interaction term (each fitted as a single-predictor model)
+    all_int_cols_fi = [c for c in all_features_fi if c.startswith("male_x_")]
+    all_int_univ_sets = {c: [c] for c in all_int_cols_fi}
+    all_int_univ = fit_univariable(all_df_fi, all_int_univ_sets, label_col="label", weight_col=weight_col)
+    all_univ_fi = {**all_univ, **all_int_univ}
+
     all_table_fi = build_display_table(
-        all_univ,
+        all_univ_fi,
         all_multi_fi,
         publication_label=config["display_label"],
         include_top_cited=True,
@@ -597,8 +671,15 @@ def run_single_config(base_df: pd.DataFrame, config: dict, include_unknown_gende
         include_all_interactions=True,
     )
     top_multi_fi = fit_logit(top_df_fi, top_features_fi, label_col="label", weight_col=weight_col)
+
+    # Univariable estimates for every interaction term (top-cited subset)
+    top_int_cols_fi = [c for c in top_features_fi if c.startswith("male_x_")]
+    top_int_univ_sets = {c: [c] for c in top_int_cols_fi}
+    top_int_univ = fit_univariable(top_df_fi, top_int_univ_sets, label_col="label", weight_col=weight_col)
+    top_univ_fi = {**top_univ, **top_int_univ}
+
     top_table_fi = build_display_table(
-        top_univ,
+        top_univ_fi,
         top_multi_fi,
         publication_label=config["display_label"],
         include_top_cited=False,
@@ -630,7 +711,25 @@ def run_single_config(base_df: pd.DataFrame, config: dict, include_unknown_gende
     top_multi_int = fit_logit(top_df_int, top_features_int, label_col="label", weight_col=weight_col)
     top_int_table = build_interaction_table(top_multi_int)
 
-    return all_table, top_table, all_table_fi, top_table_fi, all_int_table, top_int_table
+    # Counts from raw data (before encoding)
+    all_counts = compute_counts(
+        analysis_df,
+        publication_label=config["display_label"],
+        use_tertile_pub=config["use_tertile_pub"],
+        include_top_cited=True,
+        include_unknown_gender=True,
+        weight_col=weight_col,
+    )
+    top_counts = compute_counts(
+        top_df0,
+        publication_label=config["display_label"],
+        use_tertile_pub=config["use_tertile_pub"],
+        include_top_cited=False,
+        include_unknown_gender=True,
+        weight_col=weight_col,
+    )
+
+    return all_table, top_table, all_table_fi, top_table_fi, all_int_table, top_int_table, all_counts, top_counts
 
 
 def main() -> None:
@@ -659,7 +758,7 @@ def main() -> None:
         cfg_dir = out_base / cfg["name"]
         cfg_dir.mkdir(parents=True, exist_ok=True)
 
-        all_table, top_table, all_table_fi, top_table_fi, all_int_table, top_int_table = run_single_config(
+        all_table, top_table, all_table_fi, top_table_fi, all_int_table, top_int_table, all_counts, top_counts = run_single_config(
             base_df,
             cfg,
             include_unknown_gender=True,  # Always include unknown gender as explicit category
@@ -691,14 +790,21 @@ def main() -> None:
         print(f"[{cfg['name']}] wrote {all_int_out}")
         print(f"[{cfg['name']}] wrote {top_int_out}")
 
-        # Combined 5-column CSVs (main effects only + full interactions)
+        # Combined CSV: main effects from additive model + interactions from full-interaction model
         if cfg["name"] in {"papers_log10", "paperyears_log10"}:
-            no_int_out = cfg_dir / "combined_no_int.csv"
-            full_int_out = cfg_dir / "combined_full_int.csv"
-            build_combined_csv(all_table, top_table).to_csv(no_int_out, index=False)
-            build_combined_csv(all_table_fi, top_table_fi).to_csv(full_int_out, index=False)
-            print(f"[{cfg['name']}] wrote {no_int_out}")
-            print(f"[{cfg['name']}] wrote {full_int_out}")
+            # Main effects: use the no-interaction model (interpretable population-average ORs)
+            # Interactions: use the full-interaction model (where those terms are properly estimated)
+            all_table_mixed = pd.concat([
+                all_table[all_table["variable"] != "Interaction"],
+                all_table_fi[all_table_fi["variable"] == "Interaction"],
+            ], ignore_index=True)
+            top_table_mixed = pd.concat([
+                top_table[top_table["variable"] != "Interaction"],
+                top_table_fi[top_table_fi["variable"] == "Interaction"],
+            ], ignore_index=True)
+            combined_out = cfg_dir / "combined.csv"
+            build_combined_csv(all_table_mixed, top_table_mixed, all_counts, top_counts).to_csv(combined_out, index=False)
+            print(f"[{cfg['name']}] wrote {combined_out}")
 
 
 if __name__ == "__main__":
